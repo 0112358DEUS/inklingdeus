@@ -1,0 +1,61 @@
+reproducibility PASS sha=ffc4fbc4a80d16d7fd50426ce81fa4e2b564ec2f repo_payload=0a0421938cf61668dd5003b966057e871f678e7c55413c64088361d13338f4a8 image_payload=matched
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.21 +/- 0.38  accept 2.143 +/- 0.029
+open-ended/2 n=  8  tok/s 25.70 +/- 0.35  accept 2.218 +/- 0.032
+open-ended/3 n=  8  tok/s 24.34 +/- 0.40  accept 2.181 +/- 0.037
+open-ended/4 n=  8  tok/s 24.74 +/- 0.37  accept 2.162 +/- 0.034
+open-ended   n= 32  tok/s 24.75 +/- 0.21  accept 2.176 +/- 0.016
+T4 LOSSLESS PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.86 +/- 0.56  accept 2.003 +/- 0.049
+open-ended/2 n=  8  tok/s 28.12 +/- 0.45  accept 2.231 +/- 0.039
+open-ended/3 n=  8  tok/s 24.78 +/- 0.52  accept 2.019 +/- 0.043
+open-ended/4 n=  8  tok/s 26.27 +/- 0.38  accept 2.119 +/- 0.032
+open-ended   n= 32  tok/s 26.01 +/- 0.33  accept 2.093 +/- 0.026
+T4 LOSSLESS PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.04 +/- 0.28  accept 2.014 +/- 0.022
+open-ended/2 n=  8  tok/s 26.96 +/- 0.32  accept 2.236 +/- 0.029
+open-ended/3 n=  8  tok/s 23.86 +/- 0.48  accept 2.034 +/- 0.041
+open-ended/4 n=  8  tok/s 25.46 +/- 0.48  accept 2.139 +/- 0.041
+open-ended   n= 32  tok/s 25.08 +/- 0.29  accept 2.106 +/- 0.023
+T4 LOSSLESS PASS
+{
+  "task": "open-ended",
+  "minimum_gain": 0.5,
+  "baseline": {
+    "block_size": 7,
+    "mean": 24.746691947325424,
+    "se": 0.20797530088764363,
+    "min": 22.416225977992784,
+    "max": 26.876787008927007
+  },
+  "candidates": [
+    {
+      "block_size": 5,
+      "mean": 26.00716193356457,
+      "se": 0.33431190128730853,
+      "delta_vs_7": 1.2604699862391477,
+      "combined_se": 0.39372347291168835,
+      "loses_one_se": false,
+      "accepted": true
+    },
+    {
+      "block_size": 6,
+      "mean": 25.079164152275467,
+      "se": 0.2940495318952013,
+      "delta_vs_7": 0.3324722049500437,
+      "combined_se": 0.3601650357642908,
+      "loses_one_se": false,
+      "accepted": false
+    }
+  ],
+  "block7_tail_accept_rate": {
+    "5": 0.04666949512091642,
+    "6": 0.03691132795927026,
+    "7": 0.020364870598218072
+  },
+  "tail_6_7_below_5pct": true,
+  "accepted_block_size": 5,
+  "verdict": "ACCEPT"
+}

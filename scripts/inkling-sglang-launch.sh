@@ -4,16 +4,19 @@
 # Usage:  ./inkling-sglang-launch.sh <rank 0|1>     (start rank 1 on the worker FIRST, then rank 0 on the head)
 #
 # DEFAULTS = the measured champion (see README; numbers are mean +/- se over 32 samples,
-# NOT single runs): marlin MoE, triton attention + fp32 reduction, page-size 1, DSpark block 7,
+# NOT single runs): marlin MoE, triton attention + fp32 reduction, page-size 1, DSpark block 5,
 # decode CUDA graphs, mem-fraction 0.85, 64K ctx, conv-commit fix ON, draft-context cap ON.
 #
-# Measure ANY change with benchmarks/accept_probe.py — this stack is nondeterministic at temp 0
+# Measure ANY change with benchmarks/chat_bench.py — this stack is nondeterministic at temp 0
 # and single-run comparisons are worthless (docs/MEASUREMENT-PROTOCOL.md).
 #
 # Site knobs (env): MASTER_IP IF HCA GID MODELS IMAGE SGLANG_PORT
 # Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE EXTRA_ARGS
+# Boot-cache knobs (env): PERSIST_JIT_CACHE JIT_CACHE_ROOT
+# Validation knob: DRY_RUN=1 renders the exact docker command without requiring Docker or weights.
 set -euo pipefail
 RANK=${1:?rank 0|1}
+case "$RANK" in 0|1) ;; *) echo "rank must be 0 or 1, got: $RANK" >&2; exit 2 ;; esac
 
 # ---- site config (edit or override) ----
 MASTER_IP=${MASTER_IP:-10.100.20.1}     # rank0's IP on the 200G link
@@ -22,6 +25,23 @@ HCA=${HCA:-rocep1s0f0}                  # RDMA device for that NIC (ibv_devices)
 GID=${GID:-3}                           # RoCEv2 IPv4 GID index (show_gids)
 MODELS=${MODELS:-/mnt/models-7552/inkling}  # dir with inkling-small-nvfp4/ + dspark-draft/
 IMAGE=${IMAGE:-local/sglang-inkling:gb10}   # baked by scripts/bake-image.sh
+LOG=${LOG:-$HOME/inkling-serve.log}         # server log (the README verify step greps this)
+
+# The defaults above are one site's values. Say so loudly when they are in use, and fail
+# early on the mistakes that otherwise surface as a silent rendezvous hang.
+for v in MASTER_IP IF HCA MODELS; do
+  if ! env | grep -q "^$v="; then
+    echo "WARN: $v not set — using built-in default '${!v}' (another site's value)" >&2
+  fi
+done
+if [ "${DRY_RUN:-0}" != 1 ]; then
+  [ -d "$MODELS" ] || { echo "ERROR: MODELS dir '$MODELS' does not exist on this node" >&2; exit 2; }
+  [ -d "$MODELS/inkling-small-nvfp4" ] || echo "WARN: '$MODELS/inkling-small-nvfp4' not found — weights missing?" >&2
+  docker image inspect "$IMAGE" >/dev/null 2>&1 || {
+    echo "ERROR: image '$IMAGE' not found on this node — build it with: ./scripts/bake-image.sh (or KVQUANT=1 for the fp4-KV image), or docker pull the prebuilt one (README)" >&2
+    exit 2
+  }
+fi
 
 # ---- champion defaults ----
 PORT=${SGLANG_PORT:-30000}
@@ -39,51 +59,104 @@ PAGE=${PAGE:-1}                         # page 128 corrupts the triton verify pa
 export INKLING_TORCH_CONV_COMMIT=${INKLING_TORCH_CONV_COMMIT:-1}   # conv-commit fix (see docs/BUGS-AND-FIXES.md)
 export INKLING_COMMIT_STEP_BIAS=${INKLING_COMMIT_STEP_BIAS:-1}
 
+# SGLANG_RAGGED_VERIFY_MODE must stay UNSET unless explicitly requested: `compact` crashes
+# Inkling's sconv JIT at first request (wall 14), `static`/`cap-accept` are calibration-only
+# modes that cost accept or speed (walls 15, 17). Only inject the env when RAGGED is non-empty.
+RAGGED_ENV=()
+if [ -n "${RAGGED:-}" ]; then
+  RAGGED_ENV+=(-e SGLANG_RAGGED_VERIFY_MODE="$RAGGED")
+fi
+
 EXTRA=()
 if [ "$SPEC" = 1 ]; then
   EXTRA+=(--speculative-algorithm DSPARK
           --speculative-draft-model-path /models/dspark-draft
           --speculative-draft-model-quantization unquant
-          --speculative-dspark-block-size "${BLOCK:-7}")
+          --speculative-dspark-block-size "${BLOCK:-5}")
 fi
 if [ "$GRAPHS" = 1 ]; then
-  EXTRA+=(--cuda-graph-bs ${GRAPH_BS:-1 2 3 4 5 6 7 8 10 12 14 16} --disable-piecewise-cuda-graph --disable-prefill-cuda-graph)
+  read -r -a GRAPH_BS_VALUES <<<"${GRAPH_BS:-1 2 3 4 5 6 7 8 10 12 14 16}"
+  EXTRA+=(--cuda-graph-bs "${GRAPH_BS_VALUES[@]}" --disable-piecewise-cuda-graph --disable-prefill-cuda-graph)
 else
   EXTRA+=(--disable-cuda-graph --disable-prefill-cuda-graph)
 fi
+read -r -a USER_EXTRA <<<"${EXTRA_ARGS:-}"
+
+# E5 opt-in: persist only compiler/JIT artifacts. Keeping the default off preserves the measured
+# champion until the cold/prime/warm hardware experiment clears T4 and the boot-time threshold.
+CACHE_MOUNTS=()
+case "${PERSIST_JIT_CACHE:-0}" in
+  0) ;;
+  1)
+    JIT_CACHE_ROOT=${JIT_CACHE_ROOT:-$HOME/.cache/inkling-sglang-jit}
+    case "$JIT_CACHE_ROOT" in
+      /*) ;;
+      *) echo "ERROR: JIT_CACHE_ROOT must be an absolute host path" >&2; exit 2 ;;
+    esac
+    CACHE_DIRS=(triton flashinfer sglang torch_extensions torchinductor cuda)
+    if [ "${DRY_RUN:-0}" != 1 ]; then
+      for cache_dir in "${CACHE_DIRS[@]}"; do
+        mkdir -p "$JIT_CACHE_ROOT/$cache_dir"
+      done
+    fi
+    CACHE_MOUNTS+=(
+      -v "$JIT_CACHE_ROOT/triton:/root/.triton"
+      -v "$JIT_CACHE_ROOT/flashinfer:/root/.cache/flashinfer"
+      -v "$JIT_CACHE_ROOT/sglang:/root/.cache/sglang"
+      -v "$JIT_CACHE_ROOT/torch_extensions:/root/.cache/torch_extensions"
+      -v "$JIT_CACHE_ROOT/torchinductor:/tmp/torchinductor_root"
+      -v "$JIT_CACHE_ROOT/cuda:/root/.nv/ComputeCache"
+    )
+    ;;
+  *) echo "ERROR: PERSIST_JIT_CACHE must be 0 or 1" >&2; exit 2 ;;
+esac
+
+DOCKER_CMD=(
+  docker run --name inkling-sglang --rm --gpus all --network host --ipc host
+  --shm-size 16g --device /dev/infiniband --cap-add IPC_LOCK
+  --ulimit memlock=-1 --ulimit stack=67108864
+  -v "$MODELS:/models:ro"
+  ${CACHE_MOUNTS[@]+"${CACHE_MOUNTS[@]}"}
+  -e SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
+  ${RAGGED_ENV[@]+"${RAGGED_ENV[@]}"}
+  -e NCCL_IB_HCA="$HCA" -e NCCL_IB_GID_INDEX="$GID"
+  -e NCCL_SOCKET_IFNAME="$IF" -e GLOO_SOCKET_IFNAME="$IF" -e TP_SOCKET_IFNAME="$IF"
+  -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none
+  -e NCCL_CUMEM_ENABLE=0 -e NCCL_NVLS_ENABLE=0 -e NCCL_CROSS_NIC=0
+  -e NCCL_IGNORE_CPU_AFFINITY=1 -e NCCL_DEBUG=WARN
+  -e TORCH_CUDA_ARCH_LIST=12.1a -e FLASHINFER_CUDA_ARCH_LIST=12.1a
+  -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1
+  -e INKLING_TORCH_CONV_COMMIT -e INKLING_COMMIT_STEP_BIAS
+  -e INKLING_NOOP_CONV_COMMIT="${INKLING_NOOP_CONV_COMMIT:-0}"
+  -e PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+  --entrypoint python3 "$IMAGE"
+  -m sglang.launch_server
+  --model-path /models/inkling-small-nvfp4 --trust-remote-code
+  --served-model-name inkling-small
+  --host 0.0.0.0 --port "$PORT"
+  --tp-size 2 --nnodes 2 --node-rank "$RANK" --dist-init-addr "$MASTER_IP:25000"
+  --context-length "$CTX"
+  --quantization modelopt_fp4
+  --attention-backend "$ATTN" --page-size "$PAGE"
+  --triton-attention-reduce-in-fp32
+  --fp4-gemm-backend "$FP4GEMM" --moe-runner-backend "$MOE"
+  --mamba-radix-cache-strategy extra_buffer
+  --mem-fraction-static "$MEMFRAC" --swa-full-tokens-ratio 0.1 --mamba-full-memory-ratio 0.1
+  --max-running-requests "${MAXREQ:-16}"
+  --chunked-prefill-size 8192
+  --reasoning-parser inkling --tool-call-parser inkling
+  --skip-server-warmup --disable-flashinfer-autotune
+  --stream-interval 32
+  "${EXTRA[@]}" ${USER_EXTRA[@]+"${USER_EXTRA[@]}"}
+)
+
+if [ "${DRY_RUN:-0}" = 1 ]; then
+  printf '%q ' "${DOCKER_CMD[@]}"
+  printf '\n'
+  exit 0
+fi
 
 docker rm -f inkling-sglang 2>/dev/null || true
-exec docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
- --shm-size 16g --device /dev/infiniband --cap-add IPC_LOCK --ulimit memlock=-1 --ulimit stack=67108864 \
- -v "$MODELS":/models:ro \
- -e SGLANG_ENABLE_UNIFIED_RADIX_TREE=1 \
- -e SGLANG_RAGGED_VERIFY_MODE="${RAGGED:-compact}" \
- -e NCCL_IB_HCA="$HCA" -e NCCL_IB_GID_INDEX="$GID" \
- -e NCCL_SOCKET_IFNAME="$IF" -e GLOO_SOCKET_IFNAME="$IF" -e TP_SOCKET_IFNAME="$IF" \
- -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none \
- -e NCCL_CUMEM_ENABLE=0 -e NCCL_NVLS_ENABLE=0 -e NCCL_CROSS_NIC=0 \
- -e NCCL_IGNORE_CPU_AFFINITY=1 -e NCCL_DEBUG=WARN \
- -e TORCH_CUDA_ARCH_LIST=12.1a -e FLASHINFER_CUDA_ARCH_LIST=12.1a \
- -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1 \
- -e INKLING_TORCH_CONV_COMMIT -e INKLING_COMMIT_STEP_BIAS \
- -e INKLING_NOOP_CONV_COMMIT="${INKLING_NOOP_CONV_COMMIT:-0}" \
- -e PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
- --entrypoint python3 "$IMAGE" \
- -m sglang.launch_server \
-  --model-path /models/inkling-small-nvfp4 --trust-remote-code \
-  --served-model-name inkling-small \
-  --host 0.0.0.0 --port "$PORT" \
-  --tp-size 2 --nnodes 2 --node-rank "$RANK" --dist-init-addr "$MASTER_IP:25000" \
-  --context-length "$CTX" \
-  --quantization modelopt_fp4 \
-  --attention-backend "$ATTN" --page-size "$PAGE" \
-  --triton-attention-reduce-in-fp32 \
-  --fp4-gemm-backend "$FP4GEMM" --moe-runner-backend "$MOE" \
-  --mamba-radix-cache-strategy extra_buffer \
-  --mem-fraction-static "$MEMFRAC" --swa-full-tokens-ratio 0.1 --mamba-full-memory-ratio 0.1 \
-  --max-running-requests "${MAXREQ:-16}" \
-  --chunked-prefill-size 8192 \
-  --reasoning-parser inkling --tool-call-parser inkling \
-  --skip-server-warmup --disable-flashinfer-autotune \
-  --stream-interval 32 \
-  "${EXTRA[@]}" ${EXTRA_ARGS:-}
+# Foreground run, teed to $LOG so the README's pool-verification grep works and the log
+# survives the container (--rm). Use `docker logs -f inkling-sglang` from another shell.
+"${DOCKER_CMD[@]}" 2>&1 | tee "$LOG"

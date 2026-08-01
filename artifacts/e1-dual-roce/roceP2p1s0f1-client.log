@@ -1,0 +1,28 @@
+ WARNING: BW peak won't be measured in this run.
+---------------------------------------------------------------------------------------
+                    RDMA_Write BW Test
+ Dual-port       : OFF		Device         : roceP2p1s0f1
+ Number of qps   : 4		Transport type : IB
+ Connection type : RC		Using SRQ      : OFF
+ PCIe relax order: ON
+ ibv_wr* API     : ON
+ TX depth        : 128
+ CQ Moderation   : 1
+ Mtu             : 4096[B]
+ Link type       : IB
+ Max inline data : 0[B]
+ rdma_cm QPs	 : ON
+ Data ex. method : rdma_cm
+---------------------------------------------------------------------------------------
+ local address: LID 0000 QPN 0x04f8 PSN 0x476a7a
+ local address: LID 0000 QPN 0x04f9 PSN 0x515bdc
+ local address: LID 0000 QPN 0x04fa PSN 0x6d45f6
+ local address: LID 0000 QPN 0x04fb PSN 0x506d0d
+ remote address: LID 0000 QPN 0x0558 PSN 0xc75cbb
+ remote address: LID 0000 QPN 0x0559 PSN 0x5de789
+ remote address: LID 0000 QPN 0x055a PSN 0xbe2c9f
+ remote address: LID 0000 QPN 0x055b PSN 0xca7902
+---------------------------------------------------------------------------------------
+ #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]
+ 65536      1277366          0.00               111.62 		   0.212895
+---------------------------------------------------------------------------------------

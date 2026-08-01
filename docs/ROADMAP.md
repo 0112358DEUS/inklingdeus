@@ -1,27 +1,53 @@
 # Roadmap
 
+## Active optimization loop — control1/control2
+
+The live loop reached its success threshold on 2026-08-02 and stopped after E3, as required. E1
+retained the single-HCA transport, E2 was killed as not applicable at its numerical gate, and E3
+accepted DSpark block 5. Every measured serving arm used the same-session chat-templated
+open-ended `n=32` protocol and passed byte-exact T4 before and after measurement.
+
+| Rank | Status | Artifact / next proof |
+|---|---|---|
+| E1 dual RoCE twins | **COMPLETE — INCONCLUSIVE** | Both twins 111.62 Gb/s; dual 24.636 +/- 0.291 vs single 24.928 +/- 0.295 tok/s. Retain single `rocep1s0f1`. |
+| E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
+| E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
+| E4 width-1 native MTP | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E5 persistent JIT caches | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E6 mem-fraction under C8–C16 | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
+| Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
+| Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
+| Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
+| Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
+| Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
+
+Consecutive no-win iterations before success: **2** (E1 inconclusive, E2 not applicable). E3 met
+the success threshold, so the loop stopped without running E4–E7.
+
+## Historical campaigns
+
 Committed follow-on campaigns (in order):
 
-0. **STS + SPS calibration for cap-accept scheduling** (tooling shipped in `benchmarks/`): the
+1. **STS + SPS calibration for cap-accept scheduling** (tooling shipped in `benchmarks/`): the
    confidence head is trained and present, but unusable until per-position temperatures are fitted
    and a cost table is profiled. The only remaining pure-config lever on accept.
 
-1. ~~**mxfp8 KV cache**~~ — ✅ DONE (1.94× pool, superseded by fp4).
-2. ~~**NVFP4 KV cache on the triton backend**~~ — ✅ **DONE: 3.12× pool (1.1M tokens), shipped in
+2. ~~**mxfp8 KV cache**~~ — ✅ DONE (1.94× pool, superseded by fp4).
+
+3. ~~**NVFP4 KV cache on the triton backend**~~ — ✅ **DONE: 3.12× pool (1.1M tokens), shipped in
    `patches/kv-quant/`.** See the README headline section. Remaining follow-ons: long-context needle
    tests at 500K–1M, concurrency benchmarks under fp4, and a TTFT check (the draft KV write falls back
    to a per-layer python loop under quantized dtypes — correctness-neutral, possible prefill cost).
 
-3. **~~NVFP4 KV~~ (historical note)** — the capacity unlock toward true 1M in-flight tokens.
-   The pool/storage side exists (fa4 uses it); the gap is `q/k/v_descale` handling + fp4
+   *(historical scoping note, kept for context:)* the capacity unlock toward true 1M in-flight
+   tokens. The pool/storage side exists (fa4 uses it); the gap was `q/k/v_descale` handling + fp4
    block-scale dequant in the triton extend/decode/verify kernels. Donor code identified:
-   upstream PR #32333 (DSV4 fp4 triton dequant) + a fleet-internal MLA nvfp4-KV triton mod
-   (proves fp4-KV triton kernels run on this silicon). Acceptance gate: quality parity +
-   long-context needle tests (quantized KV is not byte-lossless by definition).
-   **Status: scoped + in progress** — full kernel-level plan in `KV-QUANT-TRITON-PLAN.md`
-   (mxfp8 write path already exists for the triton page-1 layout; ~240 lines across 4 files
-   for full mxfp8, ~250 more for nvfp4; capacity payoff 1.94×/3.5×).
-3. ~~**A4Q native-fp4 attention**~~ — ❌ **NOT APPLICABLE to Inkling-Small on SGLang.** Evaluated and
+   upstream PR #32333 (DSV4 fp4 triton dequant) + a fleet-internal MLA nvfp4-KV triton mod.
+   Full kernel-level plan in `KV-QUANT-TRITON-PLAN.md` (pre-implementation document; the as-built
+   description is `KV-QUANT-IMPLEMENTATION-NOTES.md`).
+
+4. ~~**A4Q native-fp4 attention**~~ — ❌ **NOT APPLICABLE to Inkling-Small on SGLang.** Evaluated and
    rejected on four independent grounds:
    - **KV width 1024** (8 kv-heads × 128 head_dim). A4Q's gain scales with KV width and needs
      **≥4096** to amortize its quantization overhead — at 1024 it is expected to be a net loss.
@@ -34,12 +60,15 @@ Committed follow-on campaigns (in order):
 
    A4Q remains excellent for *dense-GQA, wide-KV* models on vLLM (measured elsewhere on this fleet:
    Nemotron-3-Omni TTFT −22% @60K scaling to −39% @256K). It is simply the wrong tool for this model.
-4. ~~**DSpark cap-accept calibration**~~ — ✅ **RESOLVED: it works, and it still loses.** Both
+
+5. ~~**DSpark cap-accept calibration**~~ — ✅ **RESOLVED: it works, and it still loses.** Both
    artifacts were produced (SPS table with `match_fraction=1.00`; STS from 19,871 samples, ECE
    0.03651→0.03453 with a joint coordinate-descent fitter that beats the shipped greedy one).
    Calibrated cap-accept reaches accept 3.39 ± 0.18 — statistically level with static — but at
    23.4 ± 1.3 tok/s vs 34.7 ± 1.5. Full mechanism in
-   [DSPARK-CALIBRATION-FINDINGS.md](DSPARK-CALIBRATION-FINDINGS.md). **Keep static block-7.**
+   [DSPARK-CALIBRATION-FINDINGS.md](DSPARK-CALIBRATION-FINDINGS.md). **Keep static scheduling.**
+   The E3 campaign later promoted static block 5; the figures in this historical campaign used
+   block 7 and should not be reinterpreted as block-5 measurements.
    *(superseded note, kept for context:)* The confidence (STS) recorder only runs
    inside the cap-accept planner, but the planner degenerates to verify-all until an SPS cost table
    exists (`sps_table=uninitialized ... zero scheduling gain`), and the SPS recorder writes through an
@@ -47,6 +76,7 @@ Committed follow-on campaigns (in order):
    measures worse than static block-7. Tooling for both fits is in `benchmarks/` if a future build
    exposes the dump path.
 
-5. **Draft finetune** — the only remaining lever that raises accept fundamentally (a 0.9B draft
+6. **Draft finetune** — the only remaining lever that raises accept fundamentally (a 0.9B draft
    predicting a 276B target caps around accept 3.5). Everything else is scheduling.
-4. **Helion native autotune** (`HELION_AOT_AUTOTUNE=create`) to replace the seeded sm_100 configs.
+
+7. **Helion native autotune** (`HELION_AOT_AUTOTUNE=create`) to replace the seeded sm_100 configs.

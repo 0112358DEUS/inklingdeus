@@ -1,0 +1,28 @@
+reproducibility PASS sha=ffc4fbc4a80d16d7fd50426ce81fa4e2b564ec2f repo_payload=2fe4048d8f9a2847b00efd3788db5c7604f208e30152f79f3ba1eff1626c18ff image_payload=matched
+netlink error: Operation not permitted
+head hca=rocep1s0f1 netdev=enp1s0f1np1 ip=192.168.177.11 speed_mbps=200000
+worker hca=rocep1s0f1 netdev=enp1s0f1np1 ip=192.168.177.12 speed_mbps=200000
+netlink error: Operation not permitted
+rocep1s0f1 PASS average_gbits=111.62 minimum_gbits=100
+netlink error: Operation not permitted
+head hca=roceP2p1s0f1 netdev=enP2p1s0f1np1 ip=192.168.178.11 speed_mbps=200000
+netlink error: Operation not permitted
+worker hca=roceP2p1s0f1 netdev=enP2p1s0f1np1 ip=192.168.178.12 speed_mbps=200000
+roceP2p1s0f1 PASS average_gbits=111.62 minimum_gbits=100
+E1 raw-link preflight PASS: both twins meet the bandwidth gate
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 23.91 +/- 0.68  accept 2.104 +/- 0.053
+open-ended/2 n=  8  tok/s 26.27 +/- 0.38  accept 2.250 +/- 0.035
+open-ended/3 n=  8  tok/s 24.73 +/- 0.40  accept 2.195 +/- 0.033
+open-ended/4 n=  8  tok/s 24.80 +/- 0.60  accept 2.157 +/- 0.054
+open-ended   n= 32  tok/s 24.93 +/- 0.30  accept 2.177 +/- 0.023
+T4 LOSSLESS PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 23.75 +/- 0.44  accept 2.066 +/- 0.039
+open-ended/2 n=  8  tok/s 26.58 +/- 0.37  accept 2.277 +/- 0.033
+open-ended/3 n=  8  tok/s 23.61 +/- 0.46  accept 2.100 +/- 0.038
+open-ended/4 n=  8  tok/s 24.60 +/- 0.38  accept 2.141 +/- 0.034
+open-ended   n= 32  tok/s 24.64 +/- 0.29  accept 2.146 +/- 0.022
+T4 LOSSLESS PASS
+A=24.928+/-0.295 tok/s  B=24.636+/-0.291 tok/s  delta=-0.292  combined_se=0.414
+INCONCLUSIVE: do not accept or quote a serving improvement

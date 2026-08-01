@@ -1,0 +1,39 @@
+{
+  "task": "open-ended",
+  "minimum_gain": 0.5,
+  "baseline": {
+    "block_size": 7,
+    "mean": 24.746691947325424,
+    "se": 0.20797530088764363,
+    "min": 22.416225977992784,
+    "max": 26.876787008927007
+  },
+  "candidates": [
+    {
+      "block_size": 5,
+      "mean": 26.00716193356457,
+      "se": 0.33431190128730853,
+      "delta_vs_7": 1.2604699862391477,
+      "combined_se": 0.39372347291168835,
+      "loses_one_se": false,
+      "accepted": true
+    },
+    {
+      "block_size": 6,
+      "mean": 25.079164152275467,
+      "se": 0.2940495318952013,
+      "delta_vs_7": 0.3324722049500437,
+      "combined_se": 0.3601650357642908,
+      "loses_one_se": false,
+      "accepted": false
+    }
+  ],
+  "block7_tail_accept_rate": {
+    "5": 0.04666949512091642,
+    "6": 0.03691132795927026,
+    "7": 0.020364870598218072
+  },
+  "tail_6_7_below_5pct": true,
+  "accepted_block_size": 5,
+  "verdict": "ACCEPT"
+}

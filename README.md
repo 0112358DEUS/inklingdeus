@@ -1,5 +1,9 @@
 # keys-1M-context · Inkling-Small-NVFP4 + DSpark + NVFP4 KV Cache · SGLang · sm_121a · Two DGX Sparks
 
+> **Fork notice**: this is `0112358DEUS/inklingdeus`, a maintained fork of
+> [drowzeys/keys-1M-CTX-…-Two-DGX-Sparks](https://github.com/drowzeys/keys-1M-CTX-Inkling-Small-NVFP4-Dspark-NVFP4-KV-Cache-SGlang-SM121-optimized-on-Two-DGX-Sparks)
+> with review fixes (see [NOTICE.md](NOTICE.md) for provenance and licensing).
+
 **A full 1M-token context on two desktop DGX Sparks, first implemented NVFP4 KV cache on SGlang — for
 Inkling-Small NVFP4 + DSpark.**
 
@@ -22,8 +26,8 @@ of storage for weights, reachable at the **same path** on both nodes (NFS or loc
 
 ```bash
 # 0) on the HEAD node (rank 0), with SSH access to the worker
-git clone https://github.com/drowzeys/keys-1M-CTX-Inkling-Small-NVFP4-Dspark-NVFP4-KV-Cache-SGlang-SM121-optimized-on-Two-DGX-Sparks.git
-cd keys-1M-CTX-*
+git clone https://github.com/0112358DEUS/inklingdeus.git
+cd inklingdeus
 
 # 1) weights — once, wherever the shared storage lives
 python3 -m venv ~/hfdl-venv && ~/hfdl-venv/bin/pip install -q huggingface_hub hf_transfer
@@ -131,7 +135,7 @@ docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
     --speculative-algorithm DSPARK \
     --speculative-draft-model-path /models/dspark-draft \
     --speculative-draft-model-quantization unquant \
-    --speculative-dspark-block-size 7 \
+    --speculative-dspark-block-size 5 \
     --cuda-graph-bs 1 2 3 4 5 6 7 8 10 12 14 16 \
     --disable-piecewise-cuda-graph --disable-prefill-cuda-graph
 ```
@@ -148,7 +152,7 @@ docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
 | `--disable-prefill-cuda-graph` | the triton backend cannot replay `EXTEND` mode |
 | `--disable-piecewise-cuda-graph` | the sm_121 piecewise compiler hard-fails |
 | `--cuda-graph-bs 1 2 … 16` | an explicit list; `--cuda-graph-max-bs` does **not** filter and the default list OOMs the pool |
-| `--speculative-dspark-block-size 7` | measured optimum; 15 (the checkpoint's native block) is worse here |
+| `--speculative-dspark-block-size 5` | E3 winner: 26.007 ± 0.334 vs block 7 at 24.747 ± 0.208 tok/s (`n=32`, T4 before/after every arm) |
 | `INKLING_TORCH_CONV_COMMIT=1` + `INKLING_COMMIT_STEP_BIAS=1` | the conv-state commit fix. Without them output degenerates into prompt-replay whenever accept > 1 |
 | `--device /dev/infiniband --cap-add IPC_LOCK` | without RDMA passthrough NCCL fails with a bare `invalid usage` |
 | `--mem-fraction-static 0.85` | 0.87 boots fine but buys nothing measurable |
@@ -162,8 +166,8 @@ by the second shell and the worker silently never launches (you'll see `1/2 clie
 
 ## What you get
 
-**Context is nearly free with fp4 KV.** The KV pool barely moves between 64K and 1M
-(1,104,683 → 1,082,627 tokens, ~2%), because the SWA/mamba reserves that scale with context are
+**Context is nearly free with fp4 KV.** Historical 64K/1M measurements moved the KV pool by only
+~2%, because the SWA/mamba reserves that scale with context are
 small next to a quantized pool. That is *not* true on bf16, where the same change costs most of the
 pool — which is why `scripts/inkling-sglang-launch.sh` (the bf16 path) still defaults to 64K while
 the champion launcher defaults to the full 1M.
@@ -172,24 +176,27 @@ the champion launcher defaults to the full 1M.
 |---|---|---|
 | launch | `./scripts/nvfp4-kv-boot.sh <rank>` | `CTX=65536 ./scripts/nvfp4-kv-boot.sh <rank>` |
 | context | **1,048,576** | 65,536 |
-| KV pool | **1,082,627 tokens** | 1,104,683 tokens |
-| decode | ~33 tok/s | ~33 tok/s |
-| accept (of 8) | ~3.5 | ~3.5 |
+| KV pool | **1,349,214 tokens in the accepted E3 run** | boot-dependent; must exceed declared context |
+| decode | **26.007 ± 0.334 tok/s open-ended** | remeasure after profile change |
+| accept (of 6) | **2.093 ± 0.026 open-ended** | remeasure after profile change |
 
 ### Throughput depends heavily on workload — quote a task class, always
 
-Measured on this stack, stock draft, temp 0, `n=32` per class (harness:
-[`benchmarks/accept_probe.py`](benchmarks/accept_probe.py)):
+Measured on this stack, stock draft, temp 0. Serving claims use the chat-templated
+[`benchmarks/chat_bench.py`](benchmarks/chat_bench.py); the legacy raw-continuation probe is
+retained separately for historical comparison. E3 remeasured open-ended serving on the current
+block-5 champion. The other task-class rows remain block-7 historical references and must not be
+pooled with the new arm:
 
 | workload | accept (of 8) | tok/s |
 |---|---|---|
-| GSM8K-style (short, structured) | **4.81 ± 0.14** | — |
-| code explanation | 2.46 ± 0.05 | 26.0 ± 0.6 |
-| chat | 2.20 ± 0.03 | 23.2 ± 0.3 |
-| open-ended prose | 2.15 ± 0.03 | 22.6 ± 0.3 |
-| **pooled open-ended mix (n=96)** | **2.27 ± 0.03** | **23.9 ± 0.3** |
+| GSM8K-style (block-7 historical) | **4.81 ± 0.14** | — |
+| code explanation (block-7 historical) | 2.46 ± 0.05 | 26.0 ± 0.6 |
+| chat (block-7 historical) | 2.20 ± 0.03 | 23.2 ± 0.3 |
+| **open-ended prose (block-5 champion, n=32)** | **2.093 ± 0.026** | **26.007 ± 0.334** |
+| pooled open-ended mix (block-7 historical, n=96) | 2.27 ± 0.03 | 23.9 ± 0.3 |
 
-**Plan against ~24 tok/s for open-ended work and ~2× that for short structured tasks.** The spread is
+**Plan against ~26 tok/s for open-ended work on the block-5 champion.** The prior task-class spread is
 not noise — it's the same gradient RadixArk's card shows across its nine datasets (GSM8K 4.79 →
 Arena-Hard 2.70): predictable, templated text drafts well; novel open-ended prose does not.
 Our GSM8K-style number reproduces theirs to within 0.02, which is what validates the harness.
@@ -237,16 +244,39 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | Path | What |
 |---|---|
 | `scripts/nvfp4-kv-boot.sh` | **the champion launcher** (1M context, fp4 KV) |
+| `scripts/dual-roce-preflight.sh` | E1 per-twin RDMA/GID/≥100-Gb/s fail-closed preflight |
+| `scripts/read-only-spark-preflight.sh` | no-mutation two-node access/runtime/repo/model/RDMA readiness audit |
+| `scripts/run-e1-dual-roce-ab.sh` | same-session, one-variable single-vs-dual HCA experiment |
+| `scripts/run-e2-fp4-gemm-ab.sh` | same-session dense FP4 backend experiment with GPU numerical gate |
+| `scripts/run-e3-block-sweep.sh` | block 5/6/7 sweep with native accept-by-position evidence |
+| `scripts/run-e4-width1-mtp-ab.sh` | accepted DSpark block 5 vs native width-1 MTP with weight/runtime preflights |
+| `scripts/run-e5-jit-cache-ab.sh` | balanced cold/prime/warm boot experiment for opt-in compiler-cache mounts |
+| `scripts/run-e6-memfrac-ab.sh` | MEMFRAC 0.85/0.68 C8/C16 experiment with host-memory evidence |
+| `scripts/earlyoom-preflight.sh` | read-only check for active earlyoom and readable OOM journals |
+| `scripts/host-memory-guard.sh` | experiment-scoped 12-GiB guard that removes only the serving container |
+| `scripts/locked-experiment-launch.sh` | fixes every non-factor serving knob for reproducible A/B arms |
+| `scripts/champion-profile.sh` | carries an accepted E3 block/E4 speculator into every later experiment |
+| `scripts/repo_fingerprint.py` | hashes tracked and untracked runnable bytes/modes across both nodes |
+| `scripts/run-quality-gates.sh` | locked Q2/Q3 NIAH, full GSM8K, and post-tool regression suite |
+| `scripts/fetch-gsm8k.sh` | immutable official GSM8K test-split fetch and checksum gate |
+| `scripts/check_launch_render.py` | no-GPU dry-run validation of the champion command contract |
+| `scripts/image-fingerprint.sh` | stable patched-payload identity check across independent bakes |
 | `scripts/bake-image.sh` | builds `local/sglang-inkling:gb10[-kvquant]` from a digest-pinned upstream |
 | `scripts/inkling-sglang-launch.sh` | underlying launcher; every knob is an env var |
 | `patches/kv-quant/` | the KV-quantization implementation (6 files) |
 | `patches/files/` + `patches/all-patches.diff` | base GB10 patches, byte-exact and as a reviewable diff |
 | `docs/MEASUREMENT-PROTOCOL.md` | **read before benchmarking anything** |
-| `docs/BUGS-AND-FIXES.md` | 22 walls: symptom → root cause → fix |
+| `docs/BUGS-AND-FIXES.md` | 23 walls: symptom → root cause → fix |
 | `docs/KV-QUANT-IMPLEMENTATION-NOTES.md` | how the fp4 KV path works internally |
 | `docs/DRAFT-FINETUNE-PLAN.md` | the remaining accept lever (+ A4Q applicability appendix) |
+| `docs/EXPERIMENT-E7-FA4-PORT.md` | pinned SM120 donor and the pre-implementation SGLang port gates |
 | `docs/ROADMAP.md` | done / blocked / why |
-| `benchmarks/accept_probe.py` | the 32-sample harness to use for every comparison |
+| `benchmarks/chat_bench.py` | chat-templated 4-seed × 8-rep harness for serving comparisons |
+| `benchmarks/concurrency_bench.py` | chat-templated exact-n C1→C16 aggregate-throughput harness |
+| `benchmarks/niah_eval.py` | tokenizer-measured 512K/1M needle checks at 10/50/90% depth |
+| `benchmarks/gsm8k_eval.py` | resumable full 1,319-item GSM8K scorer against the pinned reference |
+| `benchmarks/tool_call_regression.py` | structured call + post-tool parser-token leak regression suite |
+| `benchmarks/accept_probe.py` | legacy raw `/generate` harness; not valid for serving claims |
 | `benchmarks/tests_verify_nvfp4.py` | 20 bitwise-exactness tests for the fp4 kernels |
 | `specs/001-oneshot-install/` | the same install as a **gated** task list for agents |
 | [`Journal log/`](Journal%20log/) | long-form build write-ups — the story behind the fixes |
@@ -258,12 +288,20 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 ## Knobs
 
 All are env vars on the launchers: `CTX` · `MEMFRAC` (0.85 default; 0.87 works, buys nothing
-measurable) · `MAXREQ` · `BLOCK` (7 is optimal; 15 is worse here) · `KVD` (`fp4_mx_block16` default —
-**not** `nvfp4`, which selects the flashinfer/trtllm recipe the triton lane cannot consume) ·
-`GRAPH_BS` · `IMAGE` · `EXTRA_ARGS`.
+measurable) · `MAXREQ` · `BLOCK` (**5 is the accepted E3 champion**) · `KVD` (`fp4_mx_block16` default —
+**not** `nvfp4`, which selects the flashinfer/trtllm recipe the triton lane cannot consume; read by
+`nvfp4-kv-boot.sh`) · `GRAPH_BS` · `IMAGE` · `EXTRA_ARGS` · `LOG` (server log path, default
+`~/inkling-serve.log` — the verify grep reads this) · `PERSIST_JIT_CACHE=1` plus an absolute
+`JIT_CACHE_ROOT` (E5 opt-in; default off pending hardware proof) · `INKLING_DRAFT_CTX_CAP` (default 65536; pins
+the draft to its 64K adaptation so a huge declared context doesn't crater acceptance — baked patch #6).
 
-Leave `SGLANG_RAGGED_VERIFY_MODE` **unset**: `compact` crashes Inkling's sconv JIT, and `cap-accept`
-needs calibration artifacts (see [ROADMAP](docs/ROADMAP.md)).
+Ranked runners after E3 also accept `CHAMPION_BLOCK` (default `5`) and
+`CHAMPION_SPECULATOR=dspark|mtp-width1` (default `dspark`) so an accepted result becomes the next
+experiment's baseline instead of silently reverting to the original recipe.
+
+`SGLANG_RAGGED_VERIFY_MODE` stays **unset** unless you set `RAGGED=...` (the launcher only injects
+it on request): `compact` crashes Inkling's sconv JIT, `static` costs accept, and `cap-accept` is
+calibration-only and measures slower even calibrated (walls 14, 15, 17).
 
 ## Provenance
 

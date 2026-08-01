@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Statistically-powered accept/tok-s probe.
+"""Legacy raw-continuation accept/tok-s probe.
 
 Why: on this stack the target forward is nondeterministic at temp 0, and accept depends
 heavily on WHICH continuation a run lands on (repetitive text drafts easily -> high accept;
@@ -7,11 +7,16 @@ novel prose -> low). A single 10-run probe on one seed cannot separate a config 
 content noise. This runs multiple seeds x repeats and reports mean +/- stderr so two configs
 can actually be compared.
 
-Usage: accept_probe3.py [label] [--reps N] [--tokens N]
-"""
-import json, sys, time, statistics, urllib.request
+This sends untemplated text to /generate and therefore reproduces the known echo
+effect. Do not use it for serving claims or config acceptance decisions; use
+benchmarks/chat_bench.py instead. It remains only for comparison with historical
+raw-continuation figures.
 
-URL = "http://10.100.10.1:30000"
+Usage: accept_probe.py [label] [--reps N] [--tokens N]     (INKLING_URL env overrides the endpoint)
+"""
+import json, os, sys, time, statistics, urllib.request
+
+URL = os.environ.get("INKLING_URL", "http://localhost:30000")
 SEEDS = [
     ("press", "The invention of the printing press in the fifteenth century transformed European society in ways that its creators could scarcely have imagined. Before Gutenberg, books were copied by hand, a slow and expensive process, and ideas travelled at the pace of a walking scribe"),
     ("litho", "Modern semiconductor manufacturing depends on photolithography, a process in which light is projected through a patterned mask onto a silicon wafer coated with photoresist. As feature sizes shrank below the wavelength of the light itself, engineers turned to"),

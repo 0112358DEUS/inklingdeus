@@ -1,0 +1,34 @@
+ WARNING: BW peak won't be measured in this run.
+
+************************************
+* Waiting for client to connect... *
+************************************
+---------------------------------------------------------------------------------------
+                    RDMA_Write BW Test
+ Dual-port       : OFF		Device         : rocep1s0f1
+ Number of qps   : 4		Transport type : IB
+ Connection type : RC		Using SRQ      : OFF
+ PCIe relax order: ON
+ ibv_wr* API     : ON
+ CQ Moderation   : 1
+ Mtu             : 4096[B]
+ Link type       : IB
+ Max inline data : 0[B]
+ rdma_cm QPs	 : ON
+ Data ex. method : rdma_cm
+---------------------------------------------------------------------------------------
+ Waiting for client rdma_cm QP to connect
+ Please run the same command with the IB/RoCE interface IP
+---------------------------------------------------------------------------------------
+ local address: LID 0000 QPN 0x0658 PSN 0x5ed196
+ local address: LID 0000 QPN 0x0659 PSN 0xbb6ac8
+ local address: LID 0000 QPN 0x065a PSN 0x8da872
+ local address: LID 0000 QPN 0x065b PSN 0xe5c3d9
+ remote address: LID 0000 QPN 0x05f8 PSN 0x89240a
+ remote address: LID 0000 QPN 0x05f9 PSN 0xc4be2c
+ remote address: LID 0000 QPN 0x05fa PSN 0xa20206
+ remote address: LID 0000 QPN 0x05fb PSN 0x7adfdd
+---------------------------------------------------------------------------------------
+ #bytes     #iterations    BW peak[Gb/sec]    BW average[Gb/sec]   MsgRate[Mpps]
+ 65536      1277375          0.00               111.62 		   0.212896
+---------------------------------------------------------------------------------------

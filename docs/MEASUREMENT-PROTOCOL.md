@@ -33,16 +33,37 @@ and say which class you measured — a "faster" config may simply have been meas
 
 ## The protocol
 
-Use [`benchmarks/accept_probe.py`](../benchmarks/accept_probe.py):
+Use [`benchmarks/chat_bench.py`](../benchmarks/chat_bench.py) for serving comparisons:
 
-- **4 distinct mid-prose seeds × 8 reps = 32 samples** (mid-sentence continuations, never bare
-  instructions — bare instructions through `/generate` fall into repetition traps that inflate accept)
+- **4 fixed, topic-distinct prompts × 8 reps = 32 samples per task class**
+- chat requests only (`/v1/chat/completions` with `return_meta_info=true`); never substitute raw
+  `/generate`, whose untemplated inputs fall into repetition traps that inflate acceptance
 - 2 warm-up calls first (cold first-request always reads low)
 - reports **mean ± standard error** and range, per-seed and overall
 
 ```bash
-python3 benchmarks/accept_probe.py "my-config-label" --reps 8
+# One task class: n=32. Use the same class for both A/B arms.
+python3 benchmarks/chat_bench.py "my-config-label" --task open-ended --reps 8 \
+  --output "my-config-label.json"
+
+# Full quality/task profile: n=32 independently for each class.
+python3 benchmarks/chat_bench.py "my-config-label" --task all --reps 8
 ```
+
+[`benchmarks/accept_probe.py`](../benchmarks/accept_probe.py) is deliberately retained as a
+**legacy raw-continuation probe** so old 3.44 accept / 34.3 tok/s figures remain reproducible. It
+must not be used for serving claims or optimization acceptance decisions.
+
+Concurrency claims use [`benchmarks/concurrency_bench.py`](../benchmarks/concurrency_bench.py):
+the same four chat prompts and eight repetitions produce exact n=32 at each requested level, with
+aggregate tokens/s summarized across fixed-size waves. The retired raw `/generate` C1/C4/C8
+script is not comparable to real chat serving.
+
+Quality gates are scored separately from speed A/Bs. [`benchmarks/niah_eval.py`](../benchmarks/niah_eval.py)
+records tokenizer-measured chat input length and requires all predefined depths to pass;
+[`benchmarks/gsm8k_eval.py`](../benchmarks/gsm8k_eval.py) scores the complete checksum-pinned test
+split; [`benchmarks/tool_call_regression.py`](../benchmarks/tool_call_regression.py) requires every
+structured and post-tool flow to pass. Do not turn a hand-picked subset into a percentage claim.
 
 **Rules**
 1. Never quote a single-run number. Ever.

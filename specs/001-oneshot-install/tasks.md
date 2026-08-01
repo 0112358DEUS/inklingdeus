@@ -61,12 +61,12 @@ MASTER_IP=<rank0-link-ip> IF=<link-nic> HCA=<rdma-dev> MODELS=<mount>/inkling ./
 (For a bf16-KV serve instead, use `./scripts/inkling-sglang-launch.sh <rank>` — same flags, ~354K pool.)
 
 Defaults encode the measured champion: marlin MoE · triton attention **+ fp32 reduction** ·
-page-size 1 · DSpark block 7 · decode graphs · mem-fraction 0.85 · 64K ctx · conv-commit fix ·
+page-size 1 · DSpark block 5 · decode graphs · mem-fraction 0.85 · 64K ctx · conv-commit fix ·
 draft-context cap.
 Boot takes ~6-8 min (156 GB NFS weight load). Watch: `docker logs -f inkling-sglang`.
 
-**GATE T3**: log shows `Initialized DSpark draft runner ... gamma=7`, `The server is fired up and
-ready to roll!`, and `max_total_num_tokens` **greater than** `context_len` (≈1,082,627 vs 1,048,576). If the scheduler dies on the first request,
+**GATE T3**: log shows `Initialized DSpark draft runner ... gamma=5`, `The server is fired up and
+ready to roll!`, and `max_total_num_tokens` **greater than** `context_len` (≈1,349,214 vs 1,048,576 in the accepted E3 run). If the scheduler dies on the first request,
 see the wall table in `docs/BUGS-AND-FIXES.md` — every failure we hit is listed with its fix.
 
 ## T4 — Verify losslessness (MANDATORY before trusting any numbers)
@@ -85,23 +85,30 @@ regression — do not proceed; diff your image against this repo's patches.
 ## T5 — Benchmark (optional but recommended)
 
 ```bash
-python3 benchmarks/accept_probe.py "my-install" --reps 8   # 32 samples, mean +/- se
-python3 benchmarks/concurrency_bench.py                    # C1/C4/C8 aggregate throughput
+# Run on the head node (or set INKLING_URL=http://<head>:30000 from elsewhere).
+python3 benchmarks/chat_bench.py "my-install" --task all --reps 8  # n=32 per class
+python3 benchmarks/accept_probe.py "legacy-raw" --reps 8            # historical only
+python3 benchmarks/concurrency_bench.py "my-install" --concurrency 1 2 4 8 16  # n=32 at each level
 ```
 
 **Read [`docs/MEASUREMENT-PROTOCOL.md`](../../docs/MEASUREMENT-PROTOCOL.md) before comparing
 anything.** This stack is nondeterministic at temp 0; single-run numbers vary 3-4x on identical
-config. Expect accept ~3.4 ± 0.2 and ~34 ± 2 tok/s mean on the champion. If you see a single run
-at 60+ or at 12, that is the same distribution, not a finding.
+config. The current block-5 champion measured 26.007 ± 0.334 tok/s and 2.093 ± 0.026 accept on
+chat-templated open-ended serving (`n=32`). The legacy raw-continuation harness remains historical
+only: its ~34 tok/s result is inflated by the echo effect and cannot support a serving claim. If
+you see a single run at 60+ or at 12, that is the same broad distribution, not a finding.
 
 ## T6 — Point your client at it
 
 OpenAI-compatible: `http://<head>:30000/v1` · model `inkling-small` · reasoning + tool-call
 parsers active.
 
-Context profiles (see README table for measured numbers): `CTX=65536` = max speed (default);
-`CTX=393216` = max self-consistent context (pool >= ctx); `CTX=524288` = max declared
-(pool 310K is the real in-flight cap). NEVER use `--kv-cache-dtype fp8_e4m3` (wall #13:
-catastrophic silent corruption). Declared context stretches the draft's rope scaling —
-long-context profiles are slower even on short prompts. Re-run the T4 lossless gate after
-any CTX change.
+Context profiles (see README table for measured numbers). On the champion fp4-KV path
+(`nvfp4-kv-boot.sh`) the pool barely moves with context, so `CTX=1048576` is the default and
+`CTX=65536` a short-context profile at the same speed. On the bf16 fallback
+(`inkling-sglang-launch.sh`) the pool shrinks sharply with declared context — 64K is the sane
+default there (bf16-era limits: ~393K max self-consistent, ~310K in-flight cap at 524K declared).
+NEVER use `--kv-cache-dtype fp8_e4m3` (wall #13: catastrophic silent corruption). The draft's
+context is pinned to its 64K adaptation by baked patch #6 (`INKLING_DRAFT_CTX_CAP`, default
+65536), so a large declared context no longer craters acceptance. Re-run the T4 lossless gate
+after any CTX change.
