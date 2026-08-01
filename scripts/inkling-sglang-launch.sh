@@ -13,6 +13,8 @@
 # Site knobs (env): MASTER_IP IF HCA GID MODELS IMAGE SGLANG_PORT
 # Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE EXTRA_ARGS
 # Boot-cache knobs (env): PERSIST_JIT_CACHE JIT_CACHE_ROOT
+# Decode-latency knobs (env, E8 experiment only): NCCL_ALGO NCCL_PROTO — unset preserves NCCL's
+# autotuned defaults (the measured champion); set only inside a same-session A/B.
 # Validation knob: DRY_RUN=1 renders the exact docker command without requiring Docker or weights.
 set -euo pipefail
 RANK=${1:?rank 0|1}
@@ -65,6 +67,16 @@ export INKLING_COMMIT_STEP_BIAS=${INKLING_COMMIT_STEP_BIAS:-1}
 RAGGED_ENV=()
 if [ -n "${RAGGED:-}" ]; then
   RAGGED_ENV+=(-e SGLANG_RAGGED_VERIFY_MODE="$RAGGED")
+fi
+
+# E8 opt-in: NCCL collective tuning for the per-decode-step TP2 all-reduce. Injected only when
+# set, so the default launch keeps NCCL's own protocol/algorithm selection (the measured champion).
+NCCL_TUNE_ENV=()
+if [ -n "${NCCL_ALGO:-}" ]; then
+  NCCL_TUNE_ENV+=(-e NCCL_ALGO="$NCCL_ALGO")
+fi
+if [ -n "${NCCL_PROTO:-}" ]; then
+  NCCL_TUNE_ENV+=(-e NCCL_PROTO="$NCCL_PROTO")
 fi
 
 EXTRA=()
@@ -124,6 +136,7 @@ DOCKER_CMD=(
   -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none
   -e NCCL_CUMEM_ENABLE=0 -e NCCL_NVLS_ENABLE=0 -e NCCL_CROSS_NIC=0
   -e NCCL_IGNORE_CPU_AFFINITY=1 -e NCCL_DEBUG=WARN
+  ${NCCL_TUNE_ENV[@]+"${NCCL_TUNE_ENV[@]}"}
   -e TORCH_CUDA_ARCH_LIST=12.1a -e FLASHINFER_CUDA_ARCH_LIST=12.1a
   -e HF_HUB_OFFLINE=1 -e TRANSFORMERS_OFFLINE=1
   -e INKLING_TORCH_CONV_COMMIT -e INKLING_COMMIT_STEP_BIAS
