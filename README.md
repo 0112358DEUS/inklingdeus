@@ -1,5 +1,9 @@
 # keys-1M-context · Inkling-Small-NVFP4 + DSpark + NVFP4 KV Cache · SGLang · sm_121a · Two DGX Sparks
 
+> **Fork notice**: this is `0112358DEUS/inklingdeus`, a maintained fork of
+> [drowzeys/keys-1M-CTX-…-Two-DGX-Sparks](https://github.com/drowzeys/keys-1M-CTX-Inkling-Small-NVFP4-Dspark-NVFP4-KV-Cache-SGlang-SM121-optimized-on-Two-DGX-Sparks)
+> with review fixes (see [NOTICE.md](NOTICE.md) for provenance and licensing).
+
 **A full 1M-token context on two desktop DGX Sparks, first implemented NVFP4 KV cache on SGlang — for
 Inkling-Small NVFP4 + DSpark.**
 
@@ -22,8 +26,8 @@ of storage for weights, reachable at the **same path** on both nodes (NFS or loc
 
 ```bash
 # 0) on the HEAD node (rank 0), with SSH access to the worker
-git clone https://github.com/drowzeys/keys-1M-CTX-Inkling-Small-NVFP4-Dspark-NVFP4-KV-Cache-SGlang-SM121-optimized-on-Two-DGX-Sparks.git
-cd keys-1M-CTX-*
+git clone https://github.com/0112358DEUS/inklingdeus.git
+cd inklingdeus
 
 # 1) weights — once, wherever the shared storage lives
 python3 -m venv ~/hfdl-venv && ~/hfdl-venv/bin/pip install -q huggingface_hub hf_transfer
@@ -173,8 +177,8 @@ the champion launcher defaults to the full 1M.
 | launch | `./scripts/nvfp4-kv-boot.sh <rank>` | `CTX=65536 ./scripts/nvfp4-kv-boot.sh <rank>` |
 | context | **1,048,576** | 65,536 |
 | KV pool | **1,082,627 tokens** | 1,104,683 tokens |
-| decode | ~33 tok/s | ~33 tok/s |
-| accept (of 8) | ~3.5 | ~3.5 |
+| decode | ~24 tok/s open-ended, ~2× on short structured (see below) | same |
+| accept (of 8) | 2.27 pooled open-ended → 4.81 GSM8K-style (see below) | same |
 
 ### Throughput depends heavily on workload — quote a task class, always
 
@@ -259,11 +263,14 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 
 All are env vars on the launchers: `CTX` · `MEMFRAC` (0.85 default; 0.87 works, buys nothing
 measurable) · `MAXREQ` · `BLOCK` (7 is optimal; 15 is worse here) · `KVD` (`fp4_mx_block16` default —
-**not** `nvfp4`, which selects the flashinfer/trtllm recipe the triton lane cannot consume) ·
-`GRAPH_BS` · `IMAGE` · `EXTRA_ARGS`.
+**not** `nvfp4`, which selects the flashinfer/trtllm recipe the triton lane cannot consume; read by
+`nvfp4-kv-boot.sh`) · `GRAPH_BS` · `IMAGE` · `EXTRA_ARGS` · `LOG` (server log path, default
+`~/inkling-serve.log` — the verify grep reads this) · `INKLING_DRAFT_CTX_CAP` (default 65536; pins
+the draft to its 64K adaptation so a huge declared context doesn't crater acceptance — baked patch #6).
 
-Leave `SGLANG_RAGGED_VERIFY_MODE` **unset**: `compact` crashes Inkling's sconv JIT, and `cap-accept`
-needs calibration artifacts (see [ROADMAP](docs/ROADMAP.md)).
+`SGLANG_RAGGED_VERIFY_MODE` stays **unset** unless you set `RAGGED=...` (the launcher only injects
+it on request): `compact` crashes Inkling's sconv JIT, `static` costs accept, and `cap-accept` is
+calibration-only and measures slower even calibrated (walls 14, 15, 17).
 
 ## Provenance
 

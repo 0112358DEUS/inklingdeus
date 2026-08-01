@@ -17,7 +17,7 @@ The quantity being calibrated is exactly what the planner consumes:
       models/dspark.py:328-330  (apply_sts)
       dspark_planner.py:963-966 (candidates = history_survival_probs -> tau_star)
 
-Collection prerequisites (see SPS_STS_CALIBRATION.md for the full derivation):
+Collection prerequisites (see docs/DSPARK-CALIBRATION-FINDINGS.md for the full derivation):
   * SGLANG_RAGGED_VERIFY_MODE=cap-accept  -- static builds NO confidence head at all
                                              (models/dspark.py:333-335)
   * SGLANG_DSPARK_STS_COLLECT_PATH=/stscollect/raw

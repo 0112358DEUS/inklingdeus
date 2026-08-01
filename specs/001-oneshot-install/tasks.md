@@ -85,23 +85,30 @@ regression — do not proceed; diff your image against this repo's patches.
 ## T5 — Benchmark (optional but recommended)
 
 ```bash
+# Run on the head node (or set INKLING_URL=http://<head>:30000 from elsewhere)
 python3 benchmarks/accept_probe.py "my-install" --reps 8   # 32 samples, mean +/- se
 python3 benchmarks/concurrency_bench.py                    # C1/C4/C8 aggregate throughput
 ```
 
 **Read [`docs/MEASUREMENT-PROTOCOL.md`](../../docs/MEASUREMENT-PROTOCOL.md) before comparing
 anything.** This stack is nondeterministic at temp 0; single-run numbers vary 3-4x on identical
-config. Expect accept ~3.4 ± 0.2 and ~34 ± 2 tok/s mean on the champion. If you see a single run
-at 60+ or at 12, that is the same distribution, not a finding.
+config. Expect accept ~3.4 ± 0.2 and ~34 ± 2 tok/s mean from this raw-continuation harness on
+the champion — but note those figures overstate real templated serving (~2.3 accept / ~24 tok/s
+on open-ended chat; the raw probe inflates acceptance ~60% via the echo effect — see the README's
+2026-08-01 correction). If you see a single run at 60+ or at 12, that is the same distribution,
+not a finding.
 
 ## T6 — Point your client at it
 
 OpenAI-compatible: `http://<head>:30000/v1` · model `inkling-small` · reasoning + tool-call
 parsers active.
 
-Context profiles (see README table for measured numbers): `CTX=65536` = max speed (default);
-`CTX=393216` = max self-consistent context (pool >= ctx); `CTX=524288` = max declared
-(pool 310K is the real in-flight cap). NEVER use `--kv-cache-dtype fp8_e4m3` (wall #13:
-catastrophic silent corruption). Declared context stretches the draft's rope scaling —
-long-context profiles are slower even on short prompts. Re-run the T4 lossless gate after
-any CTX change.
+Context profiles (see README table for measured numbers). On the champion fp4-KV path
+(`nvfp4-kv-boot.sh`) the pool barely moves with context, so `CTX=1048576` is the default and
+`CTX=65536` a short-context profile at the same speed. On the bf16 fallback
+(`inkling-sglang-launch.sh`) the pool shrinks sharply with declared context — 64K is the sane
+default there (bf16-era limits: ~393K max self-consistent, ~310K in-flight cap at 524K declared).
+NEVER use `--kv-cache-dtype fp8_e4m3` (wall #13: catastrophic silent corruption). The draft's
+context is pinned to its 64K adaptation by baked patch #6 (`INKLING_DRAFT_CTX_CAP`, default
+65536), so a large declared context no longer craters acceptance. Re-run the T4 lossless gate
+after any CTX change.

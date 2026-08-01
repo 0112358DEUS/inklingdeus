@@ -3,9 +3,13 @@
 # Run ON EACH serving node (needs docker + internet). Idempotent.
 set -euo pipefail
 
+# Env-driven, takes no arguments (a stray `bake-image.sh KVQUANT=1` would silently skip the overlay).
+[ $# -eq 0 ] || { echo "bake-image.sh takes no arguments — did you mean: KVQUANT=1 $0 ?" >&2; exit 2; }
+
 # Pin to the exact digest this recipe was validated against (2026-07-30 push).
 UPSTREAM="${UPSTREAM:-lmsysorg/sglang@sha256:fbea1a4e25b26660dbc2384a27ead8817e9b7670f257b5c3143e0450d14524d7}"
 TAG="${TAG:-local/sglang-inkling:gb10}"
+KVTAG="${KVTAG:-$TAG-kvquant}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 SGL=/sgl-workspace/sglang/python/sglang
 
@@ -14,13 +18,13 @@ docker pull "$UPSTREAM"
 
 docker rm -f inkling-bake 2>/dev/null || true
 docker create --name inkling-bake --entrypoint bash "$UPSTREAM" -c "
-  pip install -q --no-deps -U nvidia-nccl-cu13 &&
+  pip install -q --no-deps -U 'nvidia-nccl-cu13==2.30.*' &&
   cd $SGL/srt/layers/moe/moe_runner/triton_utils/configs/ &&
   for f in *_sm_100.json; do cp \"\$f\" \"\${f%_sm_100.json}_sm_121.json\"; done &&
   python3 -c 'import ctypes;l=ctypes.CDLL(\"/usr/local/lib/python3.12/dist-packages/nvidia/nccl/lib/libnccl.so.2\");v=ctypes.c_int();l.ncclGetVersion(ctypes.byref(v));assert v.value>=23000,v.value;print(\"nccl\",v.value)'
 "
 
-# Overlay the 5 net-patched files (see patches/all-patches.diff for the deltas).
+# Overlay the 6 net-patched files (see patches/all-patches.diff for the deltas).
 docker cp "$REPO_DIR/patches/files/inkling.py.sglang_srt_models"                    inkling-bake:$SGL/srt/models/inkling.py
 docker cp "$REPO_DIR/patches/files/moe.py.sglang_srt_models_inkling_common"         inkling-bake:$SGL/srt/models/inkling_common/moe.py
 docker cp "$REPO_DIR/patches/files/sconv.py.sglang_srt_models_inkling_common"       inkling-bake:$SGL/srt/models/inkling_common/sconv.py
@@ -37,7 +41,7 @@ echo "== BAKED $TAG"
 
 # Optional: KV-quant build (NVFP4 / mxfp8 KV cache — 3.12x KV pool). KVQUANT=1 ./bake-image.sh
 if [ "${KVQUANT:-0}" = "1" ]; then
-  echo "== baking KV-quant overlay -> local/sglang-inkling:gb10-kvquant"
+  echo "== baking KV-quant overlay -> $KVTAG"
   docker rm -f kvq 2>/dev/null || true
   docker create --name kvq --entrypoint true "$TAG" >/dev/null
   docker cp "$REPO_DIR/patches/kv-quant/srt/models/inkling_common/attn.py"        kvq:$SGL/srt/models/inkling_common/attn.py
@@ -46,7 +50,7 @@ if [ "${KVQUANT:-0}" = "1" ]; then
   docker cp "$REPO_DIR/patches/kv-quant/srt/mem_cache/kv_cache_configurator.py"   kvq:$SGL/srt/mem_cache/kv_cache_configurator.py
   docker cp "$REPO_DIR/patches/kv-quant/srt/model_executor/pool_configurator.py"  kvq:$SGL/srt/model_executor/pool_configurator.py
   docker cp "$REPO_DIR/patches/kv-quant/kernels/ops/attention/kv_quant_attention.py" kvq:$SGL/kernels/ops/attention/kv_quant_attention.py
-  docker commit kvq local/sglang-inkling:gb10-kvquant >/dev/null
+  docker commit kvq "$KVTAG" >/dev/null
   docker rm kvq >/dev/null
-  echo "== BAKED local/sglang-inkling:gb10-kvquant"
+  echo "== BAKED $KVTAG"
 fi

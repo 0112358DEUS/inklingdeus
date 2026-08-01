@@ -6,9 +6,9 @@ Stage 1 (record): serve with SGLANG_DSPARK_ENABLE_SPS_RECORD=1, run this with --
 Stage 2 (fit):    --fit <dump.jsonl> <out.json>  -> groups by verify_len, median steps/sec,
                   emits the probes JSON that --speculative-dspark-sps-table-path consumes.
 """
-import json, sys, time, statistics, urllib.request, concurrent.futures as cf
+import json, os, sys, time, statistics, urllib.request, concurrent.futures as cf
 
-URL = "http://10.100.10.1:30000"
+URL = os.environ.get("INKLING_URL", "http://localhost:30000")
 SEEDS = [
     "The invention of the printing press in the fifteenth century transformed European society in ways that its creators could scarcely have imagined. Before Gutenberg, books were copied by hand, and ideas travelled at the pace of a walking scribe",
     "Modern semiconductor manufacturing depends on photolithography, a process in which light is projected through a patterned mask onto a silicon wafer coated with photoresist. As feature sizes shrank below the wavelength of the light itself",

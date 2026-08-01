@@ -7,11 +7,11 @@ novel prose -> low). A single 10-run probe on one seed cannot separate a config 
 content noise. This runs multiple seeds x repeats and reports mean +/- stderr so two configs
 can actually be compared.
 
-Usage: accept_probe3.py [label] [--reps N] [--tokens N]
+Usage: accept_probe.py [label] [--reps N] [--tokens N]     (INKLING_URL env overrides the endpoint)
 """
-import json, sys, time, statistics, urllib.request
+import json, os, sys, time, statistics, urllib.request
 
-URL = "http://10.100.10.1:30000"
+URL = os.environ.get("INKLING_URL", "http://localhost:30000")
 SEEDS = [
     ("press", "The invention of the printing press in the fifteenth century transformed European society in ways that its creators could scarcely have imagined. Before Gutenberg, books were copied by hand, a slow and expensive process, and ideas travelled at the pace of a walking scribe"),
     ("litho", "Modern semiconductor manufacturing depends on photolithography, a process in which light is projected through a patterned mask onto a silicon wafer coated with photoresist. As feature sizes shrank below the wavelength of the light itself, engineers turned to"),

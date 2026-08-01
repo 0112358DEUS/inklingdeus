@@ -2,26 +2,25 @@
 
 Committed follow-on campaigns (in order):
 
-0. **STS + SPS calibration for cap-accept scheduling** (tooling shipped in `benchmarks/`): the
+1. **STS + SPS calibration for cap-accept scheduling** (tooling shipped in `benchmarks/`): the
    confidence head is trained and present, but unusable until per-position temperatures are fitted
    and a cost table is profiled. The only remaining pure-config lever on accept.
 
-1. ~~**mxfp8 KV cache**~~ — ✅ DONE (1.94× pool, superseded by fp4).
-2. ~~**NVFP4 KV cache on the triton backend**~~ — ✅ **DONE: 3.12× pool (1.1M tokens), shipped in
+2. ~~**mxfp8 KV cache**~~ — ✅ DONE (1.94× pool, superseded by fp4).
+
+3. ~~**NVFP4 KV cache on the triton backend**~~ — ✅ **DONE: 3.12× pool (1.1M tokens), shipped in
    `patches/kv-quant/`.** See the README headline section. Remaining follow-ons: long-context needle
    tests at 500K–1M, concurrency benchmarks under fp4, and a TTFT check (the draft KV write falls back
    to a per-layer python loop under quantized dtypes — correctness-neutral, possible prefill cost).
 
-3. **~~NVFP4 KV~~ (historical note)** — the capacity unlock toward true 1M in-flight tokens.
-   The pool/storage side exists (fa4 uses it); the gap is `q/k/v_descale` handling + fp4
+   *(historical scoping note, kept for context:)* the capacity unlock toward true 1M in-flight
+   tokens. The pool/storage side exists (fa4 uses it); the gap was `q/k/v_descale` handling + fp4
    block-scale dequant in the triton extend/decode/verify kernels. Donor code identified:
-   upstream PR #32333 (DSV4 fp4 triton dequant) + a fleet-internal MLA nvfp4-KV triton mod
-   (proves fp4-KV triton kernels run on this silicon). Acceptance gate: quality parity +
-   long-context needle tests (quantized KV is not byte-lossless by definition).
-   **Status: scoped + in progress** — full kernel-level plan in `KV-QUANT-TRITON-PLAN.md`
-   (mxfp8 write path already exists for the triton page-1 layout; ~240 lines across 4 files
-   for full mxfp8, ~250 more for nvfp4; capacity payoff 1.94×/3.5×).
-3. ~~**A4Q native-fp4 attention**~~ — ❌ **NOT APPLICABLE to Inkling-Small on SGLang.** Evaluated and
+   upstream PR #32333 (DSV4 fp4 triton dequant) + a fleet-internal MLA nvfp4-KV triton mod.
+   Full kernel-level plan in `KV-QUANT-TRITON-PLAN.md` (pre-implementation document; the as-built
+   description is `KV-QUANT-IMPLEMENTATION-NOTES.md`).
+
+4. ~~**A4Q native-fp4 attention**~~ — ❌ **NOT APPLICABLE to Inkling-Small on SGLang.** Evaluated and
    rejected on four independent grounds:
    - **KV width 1024** (8 kv-heads × 128 head_dim). A4Q's gain scales with KV width and needs
      **≥4096** to amortize its quantization overhead — at 1024 it is expected to be a net loss.
@@ -34,7 +33,8 @@ Committed follow-on campaigns (in order):
 
    A4Q remains excellent for *dense-GQA, wide-KV* models on vLLM (measured elsewhere on this fleet:
    Nemotron-3-Omni TTFT −22% @60K scaling to −39% @256K). It is simply the wrong tool for this model.
-4. ~~**DSpark cap-accept calibration**~~ — ✅ **RESOLVED: it works, and it still loses.** Both
+
+5. ~~**DSpark cap-accept calibration**~~ — ✅ **RESOLVED: it works, and it still loses.** Both
    artifacts were produced (SPS table with `match_fraction=1.00`; STS from 19,871 samples, ECE
    0.03651→0.03453 with a joint coordinate-descent fitter that beats the shipped greedy one).
    Calibrated cap-accept reaches accept 3.39 ± 0.18 — statistically level with static — but at
@@ -47,6 +47,7 @@ Committed follow-on campaigns (in order):
    measures worse than static block-7. Tooling for both fits is in `benchmarks/` if a future build
    exposes the dump path.
 
-5. **Draft finetune** — the only remaining lever that raises accept fundamentally (a 0.9B draft
+6. **Draft finetune** — the only remaining lever that raises accept fundamentally (a 0.9B draft
    predicting a 276B target caps around accept 3.5). Everything else is scheduling.
-4. **Helion native autotune** (`HELION_AOT_AUTOTUNE=create`) to replace the seeded sm_100 configs.
+
+7. **Helion native autotune** (`HELION_AOT_AUTOTUNE=create`) to replace the seeded sm_100 configs.

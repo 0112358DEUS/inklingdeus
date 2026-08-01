@@ -1,5 +1,5 @@
-import json, time, urllib.request, concurrent.futures as cf, statistics, sys
-URL="http://10.100.10.1:30000/generate"
+import json, os, time, urllib.request, concurrent.futures as cf, statistics, sys
+URL=os.environ.get("INKLING_URL", "http://localhost:30000")+"/generate"
 PROMPTS={
  "list":"List 40 US states with one-line fun facts, numbered:",
  "essay":"Write a detailed essay about the spirit of American innovation:",

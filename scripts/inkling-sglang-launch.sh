@@ -14,6 +14,7 @@
 # Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE EXTRA_ARGS
 set -euo pipefail
 RANK=${1:?rank 0|1}
+case "$RANK" in 0|1) ;; *) echo "rank must be 0 or 1, got: $RANK" >&2; exit 2 ;; esac
 
 # ---- site config (edit or override) ----
 MASTER_IP=${MASTER_IP:-10.100.20.1}     # rank0's IP on the 200G link
@@ -22,6 +23,21 @@ HCA=${HCA:-rocep1s0f0}                  # RDMA device for that NIC (ibv_devices)
 GID=${GID:-3}                           # RoCEv2 IPv4 GID index (show_gids)
 MODELS=${MODELS:-/mnt/models-7552/inkling}  # dir with inkling-small-nvfp4/ + dspark-draft/
 IMAGE=${IMAGE:-local/sglang-inkling:gb10}   # baked by scripts/bake-image.sh
+LOG=${LOG:-$HOME/inkling-serve.log}         # server log (the README verify step greps this)
+
+# The defaults above are one site's values. Say so loudly when they are in use, and fail
+# early on the mistakes that otherwise surface as a silent rendezvous hang.
+for v in MASTER_IP IF HCA MODELS; do
+  if ! env | grep -q "^$v="; then
+    echo "WARN: $v not set — using built-in default '$(eval echo "\$$v")' (another site's value)" >&2
+  fi
+done
+[ -d "$MODELS" ] || { echo "ERROR: MODELS dir '$MODELS' does not exist on this node" >&2; exit 2; }
+[ -d "$MODELS/inkling-small-nvfp4" ] || echo "WARN: '$MODELS/inkling-small-nvfp4' not found — weights missing?" >&2
+docker image inspect "$IMAGE" >/dev/null 2>&1 || {
+  echo "ERROR: image '$IMAGE' not found on this node — build it with: ./scripts/bake-image.sh (or KVQUANT=1 for the fp4-KV image), or docker pull the prebuilt one (README)" >&2
+  exit 2
+}
 
 # ---- champion defaults ----
 PORT=${SGLANG_PORT:-30000}
@@ -39,6 +55,14 @@ PAGE=${PAGE:-1}                         # page 128 corrupts the triton verify pa
 export INKLING_TORCH_CONV_COMMIT=${INKLING_TORCH_CONV_COMMIT:-1}   # conv-commit fix (see docs/BUGS-AND-FIXES.md)
 export INKLING_COMMIT_STEP_BIAS=${INKLING_COMMIT_STEP_BIAS:-1}
 
+# SGLANG_RAGGED_VERIFY_MODE must stay UNSET unless explicitly requested: `compact` crashes
+# Inkling's sconv JIT at first request (wall 14), `static`/`cap-accept` are calibration-only
+# modes that cost accept or speed (walls 15, 17). Only inject the env when RAGGED is non-empty.
+RAGGED_ENV=()
+if [ -n "${RAGGED:-}" ]; then
+  RAGGED_ENV+=(-e SGLANG_RAGGED_VERIFY_MODE="$RAGGED")
+fi
+
 EXTRA=()
 if [ "$SPEC" = 1 ]; then
   EXTRA+=(--speculative-algorithm DSPARK
@@ -53,11 +77,13 @@ else
 fi
 
 docker rm -f inkling-sglang 2>/dev/null || true
-exec docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
+# Foreground run, teed to $LOG so the README's pool-verification grep works and the log
+# survives the container (--rm). Use `docker logs -f inkling-sglang` from another shell.
+docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
  --shm-size 16g --device /dev/infiniband --cap-add IPC_LOCK --ulimit memlock=-1 --ulimit stack=67108864 \
  -v "$MODELS":/models:ro \
  -e SGLANG_ENABLE_UNIFIED_RADIX_TREE=1 \
- -e SGLANG_RAGGED_VERIFY_MODE="${RAGGED:-compact}" \
+ "${RAGGED_ENV[@]}" \
  -e NCCL_IB_HCA="$HCA" -e NCCL_IB_GID_INDEX="$GID" \
  -e NCCL_SOCKET_IFNAME="$IF" -e GLOO_SOCKET_IFNAME="$IF" -e TP_SOCKET_IFNAME="$IF" \
  -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none \
@@ -86,4 +112,4 @@ exec docker run --name inkling-sglang --rm --gpus all --network host --ipc host 
   --reasoning-parser inkling --tool-call-parser inkling \
   --skip-server-warmup --disable-flashinfer-autotune \
   --stream-interval 32 \
-  "${EXTRA[@]}" ${EXTRA_ARGS:-}
+  "${EXTRA[@]}" ${EXTRA_ARGS:-} 2>&1 | tee "$LOG"
