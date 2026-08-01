@@ -1,0 +1,687 @@
+{
+  "schema_version": 1,
+  "created_at_unix": 1785621309.9998848,
+  "plan": {
+    "label": "e1-dual",
+    "url": "http://127.0.0.1:30000",
+    "model": "inkling-small",
+    "tasks": [
+      "open-ended"
+    ],
+    "prompts_per_task": 4,
+    "repetitions_per_prompt": 8,
+    "samples_per_task": 32,
+    "max_tokens": 160,
+    "warmups": 2,
+    "endpoint": "/v1/chat/completions",
+    "block_size": null
+  },
+  "summaries": {
+    "open-ended": {
+      "n": 32,
+      "tokens_per_second": {
+        "mean": 24.6360517481941,
+        "se": 0.291090670350353,
+        "min": 21.67482528923949,
+        "max": 27.779587598619855
+      },
+      "accept_length": {
+        "mean": 2.14590994939477,
+        "se": 0.022423616372697356,
+        "min": 1.8823529411764706,
+        "max": 2.388059701492537
+      },
+      "histogram_complete": true,
+      "correct_drafts_histogram": [
+        1055,
+        690,
+        328,
+        147,
+        66,
+        27,
+        36,
+        45
+      ],
+      "verify_steps": 2394,
+      "accept_by_position": [
+        {
+          "position": 1,
+          "accepted_steps": 1339,
+          "accept_rate": 0.5593149540517962
+        },
+        {
+          "position": 2,
+          "accepted_steps": 649,
+          "accept_rate": 0.27109440267335005
+        },
+        {
+          "position": 3,
+          "accepted_steps": 321,
+          "accept_rate": 0.13408521303258145
+        },
+        {
+          "position": 4,
+          "accepted_steps": 174,
+          "accept_rate": 0.07268170426065163
+        },
+        {
+          "position": 5,
+          "accepted_steps": 108,
+          "accept_rate": 0.045112781954887216
+        },
+        {
+          "position": 6,
+          "accepted_steps": 81,
+          "accept_rate": 0.03383458646616541
+        },
+        {
+          "position": 7,
+          "accepted_steps": 45,
+          "accept_rate": 0.018796992481203006
+        }
+      ]
+    }
+  },
+  "samples": [
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 0,
+      "completion_tokens": 160,
+      "elapsed_seconds": 7.381835740998213,
+      "tokens_per_second": 21.67482528923949,
+      "accept_length": 1.8823529411764706,
+      "correct_drafts_histogram": [
+        36,
+        32,
+        13,
+        2,
+        0,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 1,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.248373539005115,
+      "tokens_per_second": 25.606663718359528,
+      "accept_length": 2.2222222222222223,
+      "correct_drafts_histogram": [
+        24,
+        24,
+        16,
+        4,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 2,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.7318689829990035,
+      "tokens_per_second": 23.767545150399087,
+      "accept_length": 2.051282051282051,
+      "correct_drafts_histogram": [
+        36,
+        19,
+        14,
+        5,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 3,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.893285379999725,
+      "tokens_per_second": 23.210993188273658,
+      "accept_length": 2.0253164556962027,
+      "correct_drafts_histogram": [
+        33,
+        28,
+        9,
+        5,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 4,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.870337844993628,
+      "tokens_per_second": 23.288519954894358,
+      "accept_length": 2.0253164556962027,
+      "correct_drafts_histogram": [
+        35,
+        22,
+        14,
+        4,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 5,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.980936489002488,
+      "tokens_per_second": 22.91956104342994,
+      "accept_length": 2.0,
+      "correct_drafts_histogram": [
+        37,
+        23,
+        14,
+        2,
+        0,
+        2,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 6,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.471625989004679,
+      "tokens_per_second": 24.723307600260075,
+      "accept_length": 2.1621621621621623,
+      "correct_drafts_histogram": [
+        31,
+        21,
+        13,
+        2,
+        3,
+        3,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 0,
+      "repetition": 7,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.443729134996829,
+      "tokens_per_second": 24.830342282858656,
+      "accept_length": 2.1621621621621623,
+      "correct_drafts_histogram": [
+        25,
+        28,
+        13,
+        4,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 0,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.470080859005975,
+      "tokens_per_second": 24.729211811516905,
+      "accept_length": 2.1052631578947367,
+      "correct_drafts_histogram": [
+        33,
+        28,
+        5,
+        3,
+        4,
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 1,
+      "completion_tokens": 160,
+      "elapsed_seconds": 5.759624739999708,
+      "tokens_per_second": 27.779587598619855,
+      "accept_length": 2.388059701492537,
+      "correct_drafts_histogram": [
+        26,
+        17,
+        8,
+        11,
+        1,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 2,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.353491776004375,
+      "tokens_per_second": 25.18300261350489,
+      "accept_length": 2.1621621621621623,
+      "correct_drafts_histogram": [
+        31,
+        22,
+        12,
+        2,
+        2,
+        3,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 3,
+      "completion_tokens": 160,
+      "elapsed_seconds": 5.891823411999212,
+      "tokens_per_second": 27.1562789329609,
+      "accept_length": 2.318840579710145,
+      "correct_drafts_histogram": [
+        27,
+        19,
+        12,
+        4,
+        4,
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 4,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.001799323996238,
+      "tokens_per_second": 26.65867206860652,
+      "accept_length": 2.2857142857142856,
+      "correct_drafts_histogram": [
+        27,
+        21,
+        12,
+        2,
+        4,
+        2,
+        1,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 5,
+      "completion_tokens": 160,
+      "elapsed_seconds": 5.894343807005498,
+      "tokens_per_second": 27.14466702974436,
+      "accept_length": 2.318840579710145,
+      "correct_drafts_histogram": [
+        27,
+        23,
+        6,
+        5,
+        4,
+        1,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 6,
+      "completion_tokens": 160,
+      "elapsed_seconds": 5.90155107100145,
+      "tokens_per_second": 27.11151662927983,
+      "accept_length": 2.318840579710145,
+      "correct_drafts_histogram": [
+        27,
+        22,
+        7,
+        8,
+        0,
+        1,
+        1,
+        3
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 1,
+      "repetition": 7,
+      "completion_tokens": 160,
+      "elapsed_seconds": 5.951998014999845,
+      "tokens_per_second": 26.881729395201113,
+      "accept_length": 2.318840579710145,
+      "correct_drafts_histogram": [
+        27,
+        21,
+        6,
+        11,
+        1,
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 0,
+      "completion_tokens": 160,
+      "elapsed_seconds": 7.051662559999386,
+      "tokens_per_second": 22.689684686218726,
+      "accept_length": 2.051282051282051,
+      "correct_drafts_histogram": [
+        36,
+        23,
+        11,
+        3,
+        2,
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 1,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.547930545995769,
+      "tokens_per_second": 24.43520114883384,
+      "accept_length": 2.1621621621621623,
+      "correct_drafts_histogram": [
+        34,
+        20,
+        10,
+        4,
+        2,
+        0,
+        2,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 2,
+      "completion_tokens": 160,
+      "elapsed_seconds": 7.122848324994266,
+      "tokens_per_second": 22.462923917466515,
+      "accept_length": 2.0,
+      "correct_drafts_histogram": [
+        44,
+        18,
+        8,
+        4,
+        2,
+        0,
+        3,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 3,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.355217365999124,
+      "tokens_per_second": 25.176164839933197,
+      "accept_length": 2.2222222222222223,
+      "correct_drafts_histogram": [
+        28,
+        24,
+        10,
+        4,
+        3,
+        0,
+        0,
+        3
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 4,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.2134085729994695,
+      "tokens_per_second": 25.750761135407096,
+      "accept_length": 2.2857142857142856,
+      "correct_drafts_histogram": [
+        31,
+        19,
+        6,
+        8,
+        1,
+        0,
+        4,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 5,
+      "completion_tokens": 160,
+      "elapsed_seconds": 7.003671590005979,
+      "tokens_per_second": 22.845160276834655,
+      "accept_length": 2.0253164556962027,
+      "correct_drafts_histogram": [
+        42,
+        19,
+        8,
+        4,
+        2,
+        0,
+        2,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 6,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.996682935998251,
+      "tokens_per_second": 22.867979221524067,
+      "accept_length": 2.0253164556962027,
+      "correct_drafts_histogram": [
+        45,
+        14,
+        10,
+        3,
+        3,
+        0,
+        3,
+        1
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 2,
+      "repetition": 7,
+      "completion_tokens": 160,
+      "elapsed_seconds": 7.071130773998448,
+      "tokens_per_second": 22.627215520937998,
+      "accept_length": 2.0253164556962027,
+      "correct_drafts_histogram": [
+        42,
+        20,
+        9,
+        1,
+        2,
+        1,
+        2,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 0,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.783214549999684,
+      "tokens_per_second": 23.587636631662704,
+      "accept_length": 2.051282051282051,
+      "correct_drafts_histogram": [
+        36,
+        24,
+        9,
+        4,
+        2,
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 1,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.900783678996959,
+      "tokens_per_second": 23.18577243436448,
+      "accept_length": 2.0253164556962027,
+      "correct_drafts_histogram": [
+        41,
+        20,
+        7,
+        6,
+        2,
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 2,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.517056140997738,
+      "tokens_per_second": 24.550962357599786,
+      "accept_length": 2.1333333333333333,
+      "correct_drafts_histogram": [
+        32,
+        21,
+        13,
+        4,
+        2,
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 3,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.5330526100005955,
+      "tokens_per_second": 24.490848237633497,
+      "accept_length": 2.1333333333333333,
+      "correct_drafts_histogram": [
+        37,
+        17,
+        8,
+        8,
+        2,
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 4,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.264656389997981,
+      "tokens_per_second": 25.540107874943093,
+      "accept_length": 2.2222222222222223,
+      "correct_drafts_histogram": [
+        33,
+        16,
+        12,
+        5,
+        2,
+        2,
+        0,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 5,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.662674182996852,
+      "tokens_per_second": 24.014381553929212,
+      "accept_length": 2.0779220779220777,
+      "correct_drafts_histogram": [
+        33,
+        22,
+        14,
+        5,
+        1,
+        0,
+        0,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 6,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.024467385999742,
+      "tokens_per_second": 26.55836437455433,
+      "accept_length": 2.318840579710145,
+      "correct_drafts_histogram": [
+        25,
+        24,
+        8,
+        5,
+        4,
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "task": "open-ended",
+      "seed": 3,
+      "repetition": 7,
+      "completion_tokens": 160,
+      "elapsed_seconds": 6.4246533420009655,
+      "tokens_per_second": 24.904067423218795,
+      "accept_length": 2.1621621621621623,
+      "correct_drafts_histogram": [
+        34,
+        19,
+        11,
+        5,
+        1,
+        1,
+        1,
+        2
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 #!/bin/bash
 # CHAMPION LAUNCHER: Inkling-Small + DSpark + NVFP4 KV @ 1,048,576-token context.
 #   pool ~1,082,627 tokens (exceeds the context) | lossless | throughput is task-dependent:
-#   ~24 tok/s / accept ~2.3 on open-ended work, up to ~4.8 accept on short structured tasks
+#   26.01 +/- 0.33 tok/s / accept 2.093 +/- 0.026 on open-ended work (n=32)
 #   (see README "Throughput depends heavily on workload"). CTX=65536 for the short-context
 #   profile (same speed, 1.1M pool).
 #
@@ -17,7 +17,7 @@ RANK=${1:?rank 0|1}
 export IMAGE="${IMAGE:-local/sglang-inkling:gb10-kvquant}"
 export INKLING_TORCH_CONV_COMMIT=1 INKLING_COMMIT_STEP_BIAS=1
 export MOE="${MOE:-marlin}" GRAPHS="${GRAPHS:-1}" MEMFRAC="${MEMFRAC:-0.85}" CTX="${CTX:-1048576}"
-export MAXREQ="${MAXREQ:-16}" BLOCK="${BLOCK:-7}"
+export MAXREQ="${MAXREQ:-16}" BLOCK="${BLOCK:-5}"
 # (--triton-attention-reduce-in-fp32 is already always passed by the underlying launcher.)
 export EXTRA_ARGS="--kv-cache-dtype ${KVD:-fp4_mx_block16} ${EXTRA_ARGS:-}"
 exec "$(dirname "$0")/inkling-sglang-launch.sh" "$RANK"

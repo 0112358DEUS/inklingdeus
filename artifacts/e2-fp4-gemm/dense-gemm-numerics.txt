@@ -1,0 +1,23 @@
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/usr/local/lib/python3.12/dist-packages/torchao/quantization/quant_api.py:1731: SyntaxWarning: invalid escape sequence '\.'
+  """Configuration class for applying different quantization configs to modules or parameters based on their fully qualified names (FQNs).
+Detected nvfp4 checkpoint. Please note that the format is experimental and subject to change.
+Detected nvfp4 checkpoint. Please note that the format is experimental and subject to change.
+M= 1 backend=flashinfer_trtllm ERROR BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+M= 1 backend=marlin repeatable=True finite=True
+M= 1 cross_backend=SKIPPED missing=['flashinfer_trtllm']
+M= 2 backend=flashinfer_trtllm ERROR BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+M= 2 backend=marlin repeatable=True finite=True
+M= 2 cross_backend=SKIPPED missing=['flashinfer_trtllm']
+M= 8 backend=flashinfer_trtllm ERROR BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+M= 8 backend=marlin repeatable=True finite=True
+M= 8 cross_backend=SKIPPED missing=['flashinfer_trtllm']
+M=32 backend=flashinfer_trtllm ERROR BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+M=32 backend=marlin repeatable=True finite=True
+M=32 cross_backend=SKIPPED missing=['flashinfer_trtllm']
+E2 dense FP4 GEMM numerical gate FAIL
+- flashinfer_trtllm M=1 raised BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+- flashinfer_trtllm M=2 raised BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+- flashinfer_trtllm M=8 raised BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121
+- flashinfer_trtllm M=32 raised BackendSupportedError: mm_fp4 does not support backend 'trtllm' with capability 121

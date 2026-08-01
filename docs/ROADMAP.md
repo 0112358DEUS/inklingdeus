@@ -1,5 +1,32 @@
 # Roadmap
 
+## Active optimization loop — control1/control2
+
+The live loop reached its success threshold on 2026-08-02 and stopped after E3, as required. E1
+retained the single-HCA transport, E2 was killed as not applicable at its numerical gate, and E3
+accepted DSpark block 5. Every measured serving arm used the same-session chat-templated
+open-ended `n=32` protocol and passed byte-exact T4 before and after measurement.
+
+| Rank | Status | Artifact / next proof |
+|---|---|---|
+| E1 dual RoCE twins | **COMPLETE — INCONCLUSIVE** | Both twins 111.62 Gb/s; dual 24.636 +/- 0.291 vs single 24.928 +/- 0.295 tok/s. Retain single `rocep1s0f1`. |
+| E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
+| E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
+| E4 width-1 native MTP | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E5 persistent JIT caches | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E6 mem-fraction under C8–C16 | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
+| Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
+| Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
+| Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
+| Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
+| Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
+
+Consecutive no-win iterations before success: **2** (E1 inconclusive, E2 not applicable). E3 met
+the success threshold, so the loop stopped without running E4–E7.
+
+## Historical campaigns
+
 Committed follow-on campaigns (in order):
 
 1. **STS + SPS calibration for cap-accept scheduling** (tooling shipped in `benchmarks/`): the
@@ -39,7 +66,9 @@ Committed follow-on campaigns (in order):
    0.03651→0.03453 with a joint coordinate-descent fitter that beats the shipped greedy one).
    Calibrated cap-accept reaches accept 3.39 ± 0.18 — statistically level with static — but at
    23.4 ± 1.3 tok/s vs 34.7 ± 1.5. Full mechanism in
-   [DSPARK-CALIBRATION-FINDINGS.md](DSPARK-CALIBRATION-FINDINGS.md). **Keep static block-7.**
+   [DSPARK-CALIBRATION-FINDINGS.md](DSPARK-CALIBRATION-FINDINGS.md). **Keep static scheduling.**
+   The E3 campaign later promoted static block 5; the figures in this historical campaign used
+   block 7 and should not be reinterpreted as block-5 measurements.
    *(superseded note, kept for context:)* The confidence (STS) recorder only runs
    inside the cap-accept planner, but the planner degenerates to verify-all until an SPS cost table
    exists (`sps_table=uninitialized ... zero scheduling gain`), and the SPS recorder writes through an

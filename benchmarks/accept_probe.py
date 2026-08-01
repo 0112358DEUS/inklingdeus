@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Statistically-powered accept/tok-s probe.
+"""Legacy raw-continuation accept/tok-s probe.
 
 Why: on this stack the target forward is nondeterministic at temp 0, and accept depends
 heavily on WHICH continuation a run lands on (repetitive text drafts easily -> high accept;
 novel prose -> low). A single 10-run probe on one seed cannot separate a config effect from
 content noise. This runs multiple seeds x repeats and reports mean +/- stderr so two configs
 can actually be compared.
+
+This sends untemplated text to /generate and therefore reproduces the known echo
+effect. Do not use it for serving claims or config acceptance decisions; use
+benchmarks/chat_bench.py instead. It remains only for comparison with historical
+raw-continuation figures.
 
 Usage: accept_probe.py [label] [--reps N] [--tokens N]     (INKLING_URL env overrides the endpoint)
 """
