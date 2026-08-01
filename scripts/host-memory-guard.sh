@@ -12,11 +12,11 @@ LOG_FILE=${LOG_FILE:?set the memory-sample log path}
 case "$MIN_AVAILABLE_KIB:$POLL_SECONDS:$WAIT_FOR_CONTAINER_SECONDS" in
   *[!0-9:]*|:*|*::*) echo "numeric guard settings must be positive integers" >&2; exit 2 ;;
 esac
-[ "$MIN_AVAILABLE_KIB" -gt 0 ] && [ "$POLL_SECONDS" -gt 0 ] \
-  && [ "$WAIT_FOR_CONTAINER_SECONDS" -gt 0 ] || {
+if [ "$MIN_AVAILABLE_KIB" -le 0 ] || [ "$POLL_SECONDS" -le 0 ] \
+  || [ "$WAIT_FOR_CONTAINER_SECONDS" -le 0 ]; then
   echo "numeric guard settings must be positive integers" >&2
   exit 2
-}
+fi
 mkdir -p "$(dirname "$TRIP_FILE")" "$(dirname "$LOG_FILE")"
 
 deadline=$((SECONDS + WAIT_FOR_CONTAINER_SECONDS))
