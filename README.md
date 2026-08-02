@@ -226,7 +226,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 
 ## Why patches are needed
 
-`scripts/bake-image.sh` bakes them all. Full symptom → cause → fix table for **22 walls** lives in
+`scripts/bake-image.sh` bakes them all. Full symptom → cause → fix table for **24 walls** lives in
 [`docs/BUGS-AND-FIXES.md`](docs/BUGS-AND-FIXES.md). The load-bearing ones:
 
 | Area | Fix |
@@ -249,9 +249,10 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `scripts/run-e1-dual-roce-ab.sh` | same-session, one-variable single-vs-dual HCA experiment |
 | `scripts/run-e2-fp4-gemm-ab.sh` | same-session dense FP4 backend experiment with GPU numerical gate |
 | `scripts/run-e3-block-sweep.sh` | block 5/6/7 sweep with native accept-by-position evidence |
-| `scripts/run-e4-width1-mtp-ab.sh` | accepted DSpark block 5 vs native width-1 MTP with weight/runtime preflights |
+| `scripts/run-e4-width1-mtp-ab.sh` | DSpark block 5 vs native width-1 MTP; E4 rejected at wall #24 |
 | `scripts/run-e5-jit-cache-ab.sh` | balanced cold/prime/warm boot experiment for opt-in compiler-cache mounts |
 | `scripts/run-e6-memfrac-ab.sh` | MEMFRAC 0.85/0.68 C8/C16 experiment with host-memory evidence |
+| `scripts/run-e8-decode-latency-ab.sh` | one-factor NCCL protocol, continuous-decode-step, and KV-split sweep |
 | `scripts/earlyoom-preflight.sh` | read-only check for active earlyoom and readable OOM journals |
 | `scripts/host-memory-guard.sh` | experiment-scoped 12-GiB guard that removes only the serving container |
 | `scripts/locked-experiment-launch.sh` | fixes every non-factor serving knob for reproducible A/B arms |
@@ -266,7 +267,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `patches/kv-quant/` | the KV-quantization implementation (6 files) |
 | `patches/files/` + `patches/all-patches.diff` | base GB10 patches, byte-exact and as a reviewable diff |
 | `docs/MEASUREMENT-PROTOCOL.md` | **read before benchmarking anything** |
-| `docs/BUGS-AND-FIXES.md` | 23 walls: symptom → root cause → fix |
+| `docs/BUGS-AND-FIXES.md` | 24 walls: symptom → root cause → fix |
 | `docs/KV-QUANT-IMPLEMENTATION-NOTES.md` | how the fp4 KV path works internally |
 | `docs/DRAFT-FINETUNE-PLAN.md` | the remaining accept lever (+ A4Q applicability appendix) |
 | `docs/EXPERIMENT-E7-FA4-PORT.md` | pinned SM120 donor and the pre-implementation SGLang port gates |

@@ -1,20 +1,30 @@
 # Roadmap
 
-## Active optimization loop — control1/control2
+## Active north-star loop — control1/control2
 
-The live loop reached its success threshold on 2026-08-02 and stopped after E3, as required. E1
-retained the single-HCA transport, E2 was killed as not applicable at its numerical gate, and E3
-accepted DSpark block 5. Every measured serving arm used the same-session chat-templated
-open-ended `n=32` protocol and passed byte-exact T4 before and after measurement.
+The north-star loop resumed from current `main` on 2026-08-03. Completed rows are immutable:
+E1 retained the single-HCA transport, E2 was killed as not applicable, and E3 promoted DSpark
+block 5. E4 re-baselined that champion in the same session at **26.57 +/- 0.33 tok/s** and
+**2.142 +/- 0.026 accept**, with byte-exact T4 before and after, then rejected native width-1 MTP
+at its predeclared boot-dead gate. E8 is the next highest-value open iteration.
+
+North-star distance after E4:
+
+- **N1:** 5.43 tok/s below 32 tok/s on the current open-ended n=32 baseline.
+- **N2:** 0.658 accept below 2.8; no finetuned draft exists yet.
+- **N3:** no FA4 serving lane on sm_121; E7 remains engineering work.
+- **N4:** NIAH@1M, full GSM8K, tool regression, four upstream submissions, and current-image
+  rebase are all still open.
 
 | Rank | Status | Artifact / next proof |
 |---|---|---|
 | E1 dual RoCE twins | **COMPLETE — INCONCLUSIVE** | Both twins 111.62 Gb/s; dual 24.636 +/- 0.291 vs single 24.928 +/- 0.295 tok/s. Retain single `rocep1s0f1`. |
 | E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
 | E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
-| E4 width-1 native MTP | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
-| E5 persistent JIT caches | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
-| E6 mem-fraction under C8–C16 | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
+| E4 width-1 native MTP | **COMPLETE — REJECTED, NEW WALL #24** | Baseline 26.57 +/- 0.33 tok/s, accept 2.142 +/- 0.026, T4 x2. Candidate loaded target + MTP and allocated a 1,160,700-token pool, then the fp4 Triton extend kernel failed to parse during width-2 graph capture. No candidate serving claim. |
+| E8 decode-latency sweep | **OPEN — NEXT** | `docs/EXPERIMENT-E8-DECODE-LATENCY.md`; one-factor NCCL protocol, continuous-decode-step, and KV-split arms against a fresh same-session block-5 baseline. |
+| E5 persistent JIT caches | **OPEN** | `docs/EXPERIMENT-E5-JIT-CACHE.md`; empty-root prime, 3x/arm balanced warm boots, T4, n=32 no-regression gate. |
+| E6 mem-fraction under C8-C16 | **OPEN** | `docs/EXPERIMENT-E6-MEMFRAC.md`; active-earlyoom preflight, scoped 12-GiB guard, T4, chat n=32 at C8/C16. |
 | E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
 | Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
@@ -22,8 +32,8 @@ open-ended `n=32` protocol and passed byte-exact T4 before and after measurement
 | Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Consecutive no-win iterations before success: **2** (E1 inconclusive, E2 not applicable). E3 met
-the success threshold, so the loop stopped without running E4–E7.
+Exhaustion counter: **0 / 4**. E4 was rejected but localized a new boot-dead wall, so it does not
+count as an iteration with no adoption, no new wall, and no profiling win.
 
 ## Historical campaigns
 

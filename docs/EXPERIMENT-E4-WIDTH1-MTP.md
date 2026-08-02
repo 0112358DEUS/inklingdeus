@@ -1,7 +1,34 @@
 # E4 — DSpark block 5 vs native width-1 MTP
 
-Status: **NOT RUN — optimization loop stopped after E3 success**. This remains a prepared
-follow-on experiment against the promoted block-5 champion.
+Status: **COMPLETE — REJECTED, boot-dead at the declared kill gate** on 2026-08-03.
+
+## Live result
+
+The same-session block-5 baseline completed exact chat-templated open-ended `n=32` measurement at
+**26.57 +/- 0.33 tok/s** and **2.142 +/- 0.026 accept**. Its runtime-command contract passed and
+T4 was byte-exact before and after measurement.
+
+The width-1 native-MTP arm loaded the target and all ten MTP shards successfully. The MTP load used
+1.84 GB on rank 0 and 2.55 GB on rank 1, leaving 24.47 GB and 23.74 GB available; fp4 KV allocation
+then produced a 1,160,700-token full pool, still above the 1,048,576 declared context. At target
+verify graph capture, with 18.00/18.01 GB reported available and `num_tokens_per_req=2`, Triton's
+fp4 extend kernel failed in
+`kv_quant_attention.py:_fwd_kernel_kv_quant` with `RuntimeError: error encountered during parsing`.
+The scheduler terminated before HTTP readiness.
+
+This is not the older full-width memory deficit: width 1 fit. It is a distinct native-MTP +
+fp4-KV Triton compile wall (wall #24). Per the predeclared kill criterion, the candidate was
+rejected without changing mem-fraction, graph coverage, KV dtype, or any champion default. No
+candidate T4 or throughput claim exists.
+
+Evidence is in `artifacts/e4-width1-mtp-20260803/`, including the exact baseline JSON, pre/post T4,
+per-rank runtime records, candidate logs, MTP hash, and fail-closed boot record.
+
+- baseline JSON: `41bdea2273d8872dbec2c3310fe661d1285d9b5431cb1f8f76c84a48ccd35d73`
+- each baseline T4 record: `aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`
+- candidate boot-failure record: `2fb72cb28671bf1dc4e1abcef86116c05d865670d5ca9c484bd6b89725c33038`
+- candidate head/worker logs: `8a632f26807dacb8345fd903c2d1f411f47bbc020416e2b28a32d17648da9846` /
+  `eaf336f0ad2f2c325c44bc57c797b96751429583f9bdbff8dda4b1ee60c06b69`
 
 ## Hypothesis and gates
 
