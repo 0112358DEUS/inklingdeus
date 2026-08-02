@@ -184,7 +184,7 @@ class RunnerDetachmentTests(unittest.TestCase):
                         self.assertIn("ssh -f -o BatchMode=yes", line)
                         self.assertIn("exec env", line)
                         self.assertNotIn("nohup env", line)
-        self.assertEqual(len(launches), 6)
+        self.assertEqual(len(launches), 7)
 
 
 class ConcurrencyBenchTests(unittest.TestCase):

@@ -52,5 +52,9 @@ export EXTRA_ARGS="$EXPERIMENT_EXTRA_ARGS"
 export PERSIST_JIT_CACHE="$EXPERIMENT_PERSIST_JIT"
 export JIT_CACHE_ROOT="$EXPERIMENT_JIT_CACHE_ROOT"
 export INKLING_NOOP_CONV_COMMIT=0
+# E8 factors flow through EXPERIMENT_NCCL_*; pinned empty here so no other experiment's arm can
+# inherit a stray NCCL_ALGO/NCCL_PROTO from the operator's shell.
+export NCCL_ALGO="${EXPERIMENT_NCCL_ALGO:-}"
+export NCCL_PROTO="${EXPERIMENT_NCCL_PROTO:-}"
 
 exec "$(dirname "$0")/nvfp4-kv-boot.sh" "$RANK"
