@@ -149,6 +149,57 @@ class CompareABTests(unittest.TestCase):
                 self.arm(), self.arm(url="http://other.invalid"), "open-ended"
             )
 
+    def guarded_arm(self, *, accept: float, accept_se: float, elapsed: float):
+        arm = self.arm()
+        arm["summaries"]["open-ended"].update(
+            {"accept_length": {"mean": accept, "se": accept_se}}
+        )
+        arm["samples"] = [
+            {"task": "open-ended", "elapsed_seconds": elapsed + index * 0.001}
+            for index in range(32)
+        ]
+        return arm
+
+    def test_e8_guard_rejects_accept_regression(self):
+        baseline = self.guarded_arm(accept=2.2, accept_se=0.02, elapsed=6.0)
+        candidate = self.guarded_arm(accept=2.0, accept_se=0.02, elapsed=6.0)
+        failures, _ = compare_ab.regression_guards(
+            baseline,
+            candidate,
+            "open-ended",
+            require_accept=True,
+            require_latency=False,
+        )
+        self.assertEqual(failures, ["accept loss is at least one combined standard error"])
+
+    def test_e8_guard_rejects_latency_regression(self):
+        baseline = self.guarded_arm(accept=2.2, accept_se=0.02, elapsed=6.0)
+        candidate = self.guarded_arm(accept=2.2, accept_se=0.02, elapsed=6.5)
+        failures, _ = compare_ab.regression_guards(
+            baseline,
+            candidate,
+            "open-ended",
+            require_accept=True,
+            require_latency=True,
+        )
+        self.assertEqual(
+            failures,
+            ["latency increase is at least one combined standard error"],
+        )
+
+    def test_e8_guards_allow_nonregressing_candidate(self):
+        baseline = self.guarded_arm(accept=2.2, accept_se=0.02, elapsed=6.0)
+        candidate = self.guarded_arm(accept=2.21, accept_se=0.02, elapsed=5.9)
+        failures, reports = compare_ab.regression_guards(
+            baseline,
+            candidate,
+            "open-ended",
+            require_accept=True,
+            require_latency=True,
+        )
+        self.assertEqual(failures, [])
+        self.assertEqual(len(reports), 2)
+
 
 class RunnerDetachmentTests(unittest.TestCase):
     def test_every_nohup_launch_detaches_stdin(self):

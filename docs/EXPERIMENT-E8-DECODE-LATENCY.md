@@ -5,6 +5,11 @@ executed; nothing in this branch changes the measured champion's default launch 
 `NCCL_ALGO`/`NCCL_PROTO` launcher knobs inject only when explicitly set, and
 `locked-experiment-launch.sh` pins them empty for every other experiment).
 
+The fail-closed runner was hardened before measurement: it rejects acceptance loss at one combined
+SE for every arm, rejects per-request latency regression at one combined SE for `cds` arms, records
+all planned decisions even when an earlier arm is rejected/inconclusive, and terminates a boot arm
+as soon as its serving container disappears.
+
 ## Hypothesis and gates
 
 Single-stream decode on this stack pays three per-step overheads that no experiment has swept:

@@ -60,9 +60,20 @@ verify_reproducibility() {
 
 wait_ready() {
   local deadline=$((SECONDS + READY_TIMEOUT))
+  local seen_container=0
   while [ "$SECONDS" -lt "$deadline" ]; do
     if curl -fsS http://127.0.0.1:30000/health >/dev/null 2>&1; then
       return 0
+    fi
+    if docker inspect inkling-sglang >/dev/null 2>&1; then
+      seen_container=1
+      if [ "$(docker inspect -f '{{.State.Running}}' inkling-sglang 2>/dev/null)" != true ]; then
+        echo "server container exited before readiness" >&2
+        return 1
+      fi
+    elif [ "$seen_container" = 1 ]; then
+      echo "server container disappeared before readiness" >&2
+      return 1
     fi
     sleep 5
   done
@@ -209,9 +220,19 @@ stop_arm
 for spec in "${ARM_SPECS[@]:1}"; do
   IFS='|' read -r label _ _ <<<"$spec"
   case " ${FAILED_ARMS[*]-} " in *" $label "*) continue ;; esac
-  python3 "$REPO_DIR/benchmarks/compare_ab.py" \
-    "$RESULT_DIR/e8-baseline.json" "$RESULT_DIR/$label.json" \
-    --task open-ended | tee "$RESULT_DIR/decision-$label.txt"
+  compare_guards=(--require-accept-no-regression)
+  case "$label" in e8-cds-*) compare_guards+=(--require-latency-no-regression) ;; esac
+  if python3 "$REPO_DIR/benchmarks/compare_ab.py" \
+      "$RESULT_DIR/e8-baseline.json" "$RESULT_DIR/$label.json" \
+      --task open-ended "${compare_guards[@]}" | tee "$RESULT_DIR/decision-$label.txt"; then
+    :
+  else
+    compare_status=${PIPESTATUS[0]}
+    case "$compare_status" in
+      2|3) ;; # expected fail-closed REJECT or INCONCLUSIVE; continue to every planned arm
+      *) exit "$compare_status" ;;
+    esac
+  fi
 done
 if [ "${#FAILED_ARMS[@]}" -gt 0 ]; then
   printf 'REJECTED (boot failure, factor unavailable): %s\n' "${FAILED_ARMS[@]}" \
