@@ -316,6 +316,9 @@ def _flash_attn_fwd(
     q_descale: Optional[torch.Tensor] = None,
     k_descale: Optional[torch.Tensor] = None,
     v_descale: Optional[torch.Tensor] = None,
+    sfk: Optional[torch.Tensor] = None,
+    sfv: Optional[torch.Tensor] = None,
+    kv_fp4: bool = False,
     gather_kv_indices: Optional[torch.Tensor] = None,
     dropout_p: float = 0.0,
     dropout_seed: Optional[int] = None,
@@ -336,6 +339,7 @@ def _flash_attn_fwd(
         dropout_seed: RNG seed for dropout mask (auto-generated if None and dropout_p > 0).
     """
     q, k, v = [maybe_contiguous(t) for t in (q, k, v)]
+    sfk, sfv = [maybe_contiguous(t) for t in (sfk, sfv)]
     q_descale, k_descale, v_descale = [maybe_contiguous(t) for t in (q_descale, k_descale, v_descale)]
     num_head, head_dim = q.shape[-2:]
     if cu_seqlens_q is None:
@@ -357,15 +361,33 @@ def _flash_attn_fwd(
         num_pages, page_size = None, None
         seqlen_k = k.shape[-3]
     num_head_kv = k.shape[-2]
-    head_dim_v = v.shape[-1]
+    head_dim_v = v.shape[-1] * (2 if kv_fp4 else 1)
     if cu_seqlens_k is None:
         if page_table is None:
+            assert not kv_fp4, "fp4 KV requires page_table"
             assert k.shape == (batch_size, seqlen_k, num_head_kv, head_dim)
             assert v.shape == (batch_size, seqlen_k, num_head_kv, head_dim_v)
         else:
-            assert k.shape == (num_pages, page_size, num_head_kv, head_dim)
-            assert v.shape == (num_pages, page_size, num_head_kv, head_dim_v)
+            if kv_fp4:
+                assert q.dtype in (torch.float16, torch.bfloat16)
+                assert k.dtype == v.dtype == torch.uint8
+                assert sfk is not None and sfv is not None
+                assert k.shape == (num_pages, page_size, num_head_kv, head_dim // 2)
+                assert v.shape == (num_pages, page_size, num_head_kv, head_dim_v // 2)
+                assert sfk.dtype == sfv.dtype == torch.uint8
+                assert sfk.shape == (
+                    num_pages, page_size, num_head_kv, head_dim // 16
+                )
+                assert sfv.shape == (
+                    num_pages, page_size, num_head_kv, head_dim_v // 16
+                )
+                assert head_dim % 16 == 0 and head_dim_v % 16 == 0
+            else:
+                assert sfk is None and sfv is None
+                assert k.shape == (num_pages, page_size, num_head_kv, head_dim)
+                assert v.shape == (num_pages, page_size, num_head_kv, head_dim_v)
     else:
+        assert not kv_fp4, "fp4 KV requires paged attention"
         assert k.shape == (seqlen_k, num_head_kv, head_dim)
         assert v.shape == (seqlen_k, num_head_kv, head_dim_v)
         assert cu_seqlens_k.shape == (batch_size + 1,), (
@@ -385,7 +407,8 @@ def _flash_attn_fwd(
     assert q.dtype in [torch.float16, torch.bfloat16, torch.float8_e4m3fn, torch.float8_e5m2], (
         "inputs must be float16, bfloat16, fp8 e4m3fn, or fp8 e5m2"
     )
-    assert q.dtype == k.dtype == v.dtype, "inputs must have the same dtype"
+    if not kv_fp4:
+        assert q.dtype == k.dtype == v.dtype, "inputs must have the same dtype"
     for t in [cu_seqlens_q, cu_seqlens_k, seqused_q, seqused_k]:
         if t is not None:
             assert t.dtype == torch.int32, (
@@ -408,6 +431,8 @@ def _flash_attn_fwd(
                 q_descale,
                 k_descale,
                 v_descale,
+                sfk,
+                sfv,
                 cu_seqlens_q,
                 cu_seqlens_k,
                 seqused_q,
@@ -437,7 +462,9 @@ def _flash_attn_fwd(
     device = q.device
     q_batch_seqlen_shape = (batch_size, seqlen_q) if cu_seqlens_q is None else (total_q,)
     lse_shape = (batch_size, num_head, seqlen_q) if cu_seqlens_q is None else (num_head, total_q)
-    requires_grad = q.requires_grad or k.requires_grad or v.requires_grad
+    requires_grad = q.requires_grad or (
+        not kv_fp4 and (k.requires_grad or v.requires_grad)
+    )
 
     if out is None:
         out = torch.empty(
@@ -463,6 +490,12 @@ def _flash_attn_fwd(
         assert q_descale is None and k_descale is None and v_descale is None, (
             "q_descale/k_descale/v_descale are only supported for FP8 inputs"
         )
+
+    if kv_fp4:
+        assert arch // 10 == 12, "native fp4 KV is supported only on SM120/121"
+        assert page_size == 128, "native fp4 KV requires page_size=128"
+        assert qv is None, "native fp4 KV does not support MLA qv"
+        assert not any(t.requires_grad for t in (q,)), "native fp4 KV is forward-only"
 
     dtype = torch2cute_dtype_map[q.dtype]
     if is_fp8:
@@ -698,6 +731,7 @@ def _flash_attn_fwd(
         seqused_q is None,
         seqused_k is None,
         page_table is not None,
+        kv_fp4,
         window_size_left is not None,
         window_size_right is not None,
         learnable_sink is not None,
@@ -745,6 +779,16 @@ def _flash_attn_fwd(
         q_tensor, k_tensor, v_tensor, o_tensor = [
             to_cute_tensor(t) for t in (q, k, v, out if not is_split_kv else out_partial)
         ]
+        sfk_tensor = (
+            to_cute_tensor(sfk, assumed_align=16, leading_dim=3)
+            if sfk is not None
+            else None
+        )
+        sfv_tensor = (
+            to_cute_tensor(sfv, assumed_align=16, leading_dim=3)
+            if sfv is not None
+            else None
+        )
         if is_split_kv:
             lse_tensor = to_cute_tensor(lse_partial, assumed_align=4)
         elif lse is not None:
@@ -947,6 +991,7 @@ def _flash_attn_fwd(
                     mask_mod=mask_mod,
                     has_aux_tensors=aux_tensors is not None,
                     p_dropout=dropout_p,
+                    kv_fp4=kv_fp4,
                 )
         else:
             raise ValueError(
@@ -975,11 +1020,8 @@ def _flash_attn_fwd(
                 options="--enable-tvm-ffi",
             )
         else:
-            compile_args = [
-                fa_fwd,
-                q_tensor,
-                k_tensor,
-                v_tensor,
+            compile_args = [fa_fwd, q_tensor, k_tensor, v_tensor]
+            compile_args.extend([
                 o_tensor,
                 lse_tensor,
                 softmax_scale,
@@ -996,9 +1038,14 @@ def _flash_attn_fwd(
                 int(dropout_seed & 0xFFFFFFFF) if dropout_seed is not None and dropout_p > 0.0 else None,
                 int((dropout_seed >> 32) & 0xFFFFFFFF) if dropout_seed is not None and dropout_p > 0.0 else None,
                 current_stream,
-            ]
+            ])
             if arch // 10 in [10, 11]:
                 compile_args.insert(-3, descale_tensors_tensor)
+            if arch // 10 in [8, 12]:
+                # SM80-family call convention reserves explicit scale slots
+                # immediately before the implicit EnvStream. They are None for
+                # BF16 and populated only by the SM121 fp4 paged reader.
+                compile_args[-1:-1] = [sfk_tensor, sfv_tensor]
             _flash_attn_fwd.compile_cache[compile_key] = cute.compile(*compile_args, options="--enable-tvm-ffi")
 
     # In "fake mode", we will take torch fake tensors as input and the expected behaviors are:
@@ -1039,10 +1086,8 @@ def _flash_attn_fwd(
                 window_size_right,
             )
         else:
-            call_args = [
-                q_call,
-                k_call,
-                v_call,
+            call_args = [q_call, k_call, v_call]
+            call_args.extend([
                 out.detach() if not is_split_kv else out_partial,
                 lse_partial if is_split_kv else lse,
                 softmax_scale,
@@ -1054,7 +1099,7 @@ def _flash_attn_fwd(
                 window_size_left,
                 window_size_right,
                 learnable_sink,
-            ]
+            ])
             if arch // 10 in [10, 11]:
                 call_args.append(descale_tensors)
             call_args.extend([
@@ -1063,6 +1108,8 @@ def _flash_attn_fwd(
                 int(dropout_seed & 0xFFFFFFFF) if dropout_seed is not None and dropout_p > 0.0 else None,
                 int((dropout_seed >> 32) & 0xFFFFFFFF) if dropout_seed is not None and dropout_p > 0.0 else None,
             ])
+            if arch // 10 in [8, 12]:
+                call_args.extend([sfk, sfv])
             _flash_attn_fwd.compile_cache[compile_key](*call_args)
     if is_split_kv:
         _flash_attn_fwd_combine(
@@ -1976,6 +2023,9 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
         return_lse: bool = False,
         dropout_p: float = 0.0,
         dropout_seed: Optional[int] = None,
+        sfk: Optional[torch.Tensor] = None,
+        sfv: Optional[torch.Tensor] = None,
+        kv_fp4: bool = False,
     ):
         if dropout_p > 0.0 and dropout_seed is None:
             dropout_seed = torch.randint(0, 2**63, (1,), dtype=torch.int64).item()
@@ -2006,6 +2056,9 @@ class FlashAttnVarlenFunc(torch.autograd.Function):
             gather_kv_indices=gather_kv_indices,
             dropout_p=dropout_p,
             dropout_seed=dropout_seed,
+            sfk=sfk,
+            sfv=sfv,
+            kv_fp4=kv_fp4,
         )
         ctx.save_for_backward(q, k, v, out, lse, cu_seqlens_q, cu_seqlens_k, seqused_q, seqused_k)
         ctx.softmax_scale = softmax_scale
@@ -2132,6 +2185,9 @@ def flash_attn_varlen_func(
     return_lse: bool = False,
     dropout_p: float = 0.0,
     dropout_seed: Optional[int] = None,
+    sfk: Optional[torch.Tensor] = None,
+    sfv: Optional[torch.Tensor] = None,
+    kv_fp4: bool = False,
 ):
     """
     Explanation of some optional arguments:
@@ -2174,6 +2230,9 @@ def flash_attn_varlen_func(
         return_lse,
         dropout_p,
         dropout_seed,
+        sfk,
+        sfv,
+        kv_fp4,
     )
 
 

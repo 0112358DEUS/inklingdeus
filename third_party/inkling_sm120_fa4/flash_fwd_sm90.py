@@ -728,6 +728,8 @@ class FlashAttentionForwardSm90(FlashAttentionForwardBase):
                         mPageTable,
                         mK,
                         mV,
+                        None,
+                        None,
                         FastDivmodDivisor(mK.shape[0]),
                         batch_idx,
                         head_idx_kv,

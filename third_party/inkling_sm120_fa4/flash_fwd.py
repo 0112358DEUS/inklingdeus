@@ -106,6 +106,7 @@ class FlashAttentionForwardBase:
         self.score_mod = score_mod
         self.mask_mod = mask_mod
         self.p_dropout = p_dropout
+        self.kv_fp4 = False
         self.is_dropout = p_dropout > 0.0
         # Compile-time constants for dropout
         self.p_keep_uint8 = int(255 * (1.0 - p_dropout)) if p_dropout > 0 else 255
@@ -811,6 +812,78 @@ class FlashAttentionForwardBase:
                     pred=should_load,
                 )
 
+    @cute.jit
+    def paged_load_fp4(
+        self,
+        paged_kv_manager: PagedKVManager,
+        page_size: Int32,
+        sX: cute.Tensor,
+        K_or_V: str,
+        block: Int32,
+        smem_pipe_write: Int32,
+        seqlen: Int32,
+        need_predicates: cutlass.Constexpr,
+    ):
+        """Decode one selected block-16 E2M1/UE8M0 page tile to BF16 SMEM.
+
+        This is intentionally a correctness-first scalar loader. It reads only
+        the page-table-selected tile and therefore never materializes a BF16
+        tensor proportional to total KV capacity. A later one-factor stage may
+        vectorize the byte loads after the numerical contract is frozen.
+        """
+        assert K_or_V in ("K", "V")
+        mX = (
+            paged_kv_manager.mK_paged
+            if const_expr(K_or_V == "K")
+            else paged_kv_manager.mV_paged
+        )
+        mSF = (
+            paged_kv_manager.mK_scale
+            if const_expr(K_or_V == "K")
+            else paged_kv_manager.mV_scale
+        )
+        assert mSF is not None
+        head_dim = (
+            self.tile_hdim
+            if const_expr(K_or_V == "K")
+            else self.tile_hdimv
+        )
+        packed_dim = head_dim // 2
+        total_bytes = self.tile_n * packed_dim
+        iters = (total_bytes + self.num_threads - 1) // self.num_threads
+        stage = smem_pipe_write if const_expr(self.num_stages > 1) else 0
+
+        for i in cutlass.range_constexpr(iters):
+            linear = paged_kv_manager.thread_idx + i * self.num_threads
+            if linear < total_bytes:
+                row = linear // packed_dim
+                byte_col = linear % packed_dim
+                row_idx = block * self.tile_n + row
+                safe_row_idx = cutlass.max(row_idx, Int32(0))
+                page_idx = safe_row_idx // page_size
+                page_offset = safe_row_idx % page_size
+                valid = block >= 0 and row_idx < seqlen
+                page = paged_kv_manager.mPageTable[page_idx] if valid else Int32(0)
+                packed = mX[page_offset, byte_col, page] if valid else cutlass.Uint8(0)
+                sf = mSF[page_offset, byte_col // 8, page] if valid else cutlass.Uint8(127)
+
+                packed_i = Int32(packed)
+                scale = cute.math.exp2(Float32(Int32(sf)) - 127.0)
+                code0 = packed_i & 0xF
+                code1 = (packed_i >> 4) & 0xF
+
+                for lane in cutlass.range_constexpr(2):
+                    code = code0 if lane == 0 else code1
+                    magnitude = code & 0x7
+                    doubled = (
+                        magnitude
+                        + cutlass.max(magnitude - 4, Int32(0))
+                        + 2 * cutlass.max(magnitude - 6, Int32(0))
+                    )
+                    sign = 1.0 - 2.0 * Float32((code >> 3) & 0x1)
+                    value = 0.5 * Float32(doubled) * sign * scale
+                    sX[row, byte_col * 2 + lane, stage] = self.dtype(value)
+
 
 class FlashAttentionForwardSm80(FlashAttentionForwardBase):
     def _get_smem_layout_atom(self):
@@ -880,6 +953,8 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
         aux_tensors=None,
         dropout_seed_lo: Optional[int] = None,
         dropout_seed_hi: Optional[int] = None,
+        sfk: Optional[cute.Tensor] = None,
+        sfv: Optional[cute.Tensor] = None,
         # Always keep stream as the last parameter (EnvStream: obtained implicitly via TVM FFI).
         stream: cuda.CUstream = None,
     ):
@@ -889,9 +964,21 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
         (batch_size, seqlen_q, num_head, head_dim):(_, _, _, 1)
         """
         assert learnable_sink is None, "Learnable sink is not supported in this kernel"
-        self._check_type(
-            *(t.element_type if t is not None else None for t in (mQ, mK, mV, mO, mLSE, mCuSeqlensQ, mCuSeqlensK, mSeqUsedQ, mSeqUsedK))
-        )
+        types = [
+            t.element_type if t is not None else None
+            for t in (
+                mQ, mK, mV, mO, mLSE, mCuSeqlensQ,
+                mCuSeqlensK, mSeqUsedQ, mSeqUsedK,
+            )
+        ]
+        if const_expr(self.kv_fp4):
+            assert sfk is not None and sfv is not None
+            assert mK.element_type == mV.element_type == cutlass.Uint8
+            assert sfk.element_type == sfv.element_type == cutlass.Uint8
+            self._check_type(types[0], types[0], types[0], *types[3:])
+        else:
+            assert sfk is None and sfv is None
+            self._check_type(*types)
         # Capture o_dtype from the output tensor (FP32 for split-KV, else same as Q/K/V)
         self.o_dtype = mO.element_type
         tiled_mma_qk, tiled_mma_pv = self._get_tiled_mma()
@@ -905,12 +992,15 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
         self._setup_attributes()
         SharedStorage = self._get_shared_storage_cls()
         mQ, mK, mV, mO = [assume_tensor_aligned(t) for t in (mQ, mK, mV, mO)]
+        sfk, sfv = [assume_tensor_aligned(t) for t in (sfk, sfv)]
         # Layout transpose: depends on varlen and split-KV
         # Q always uses standard layout (no split dimension)
         Q_layout_transpose = [1, 3, 2, 0] if const_expr(mCuSeqlensQ is None) else [0, 2, 1]
         KV_layout_transpose = [1, 3, 2, 0] if const_expr(mCuSeqlensK is None) else [0, 2, 1]
         mQ = layout_utils.select(mQ, Q_layout_transpose)
         mK, mV = [layout_utils.select(t, KV_layout_transpose) for t in (mK, mV)]
+        if const_expr(self.kv_fp4):
+            sfk, sfv = [layout_utils.select(t, KV_layout_transpose) for t in (sfk, sfv)]
         # O and LSE have extra leading split dimension when is_split_kv
         if const_expr(self.is_split_kv):
             O_layout_transpose = [2, 4, 3, 1, 0] if const_expr(mCuSeqlensQ is None) else [1, 3, 2, 0]
@@ -939,7 +1029,7 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
             num_splits=num_splits,
             seqlen_k=0,
             headdim=mQ.shape[1],
-            headdim_v=mV.shape[1],
+            headdim_v=self.tile_hdimv if const_expr(self.kv_fp4) else mV.shape[1],
             total_q=cute.size(mQ.shape[0])
             if const_expr(mCuSeqlensQ is not None)
             else cute.size(mQ.shape[0]) * cute.size(mQ.shape[3]),
@@ -970,6 +1060,8 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
             mSeqUsedQ,
             mSeqUsedK,
             mPageTable,
+            sfk,
+            sfv,
             softmax_scale_log2,
             softmax_scale,
             window_size_left,
@@ -1015,6 +1107,8 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
         mSeqUsedQ: Optional[cute.Tensor],
         mSeqUsedK: Optional[cute.Tensor],
         mPageTable: Optional[cute.Tensor],
+        mKScale: Optional[cute.Tensor],
+        mVScale: Optional[cute.Tensor],
         softmax_scale_log2: Float32,
         softmax_scale: Optional[Float32],
         window_size_left: Optional[Int32],
@@ -1149,6 +1243,8 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
                 mPageTable,
                 mK,
                 mV,
+                mKScale,
+                mVScale,
                 page_size_divmod,
                 bidb=batch_size,
                 bidh=num_head_kv,
@@ -1178,16 +1274,34 @@ class FlashAttentionForwardSm80(FlashAttentionForwardBase):
                 tVcV_paged = paged_kv_manager.gmem_thr_copy_KV.partition_S(cV_paged)
                 t0VcV_paged = paged_kv_manager.gmem_thr_copy_KV.get_slice(0).partition_S(cV_paged)
                 tVpV_paged = paged_kv_manager.tVpV
-            load_K = partial(
-                self.paged_load_K, paged_kv_manager, page_size,
-                tKsK_paged, tKcK_paged, t0KcK_paged, tKpK_paged,
-                seqlen=seqlen.seqlen_k,
-            )
-            load_V = partial(
-                self.paged_load_V, paged_kv_manager, page_size,
-                tVsV_paged, tVcV_paged, t0VcV_paged, tVpV_paged,
-                seqlen=seqlen.seqlen_k,
-            )
+            if const_expr(self.kv_fp4):
+                load_K = partial(
+                    self.paged_load_fp4,
+                    paged_kv_manager,
+                    page_size,
+                    sK,
+                    "K",
+                    seqlen=seqlen.seqlen_k,
+                )
+                load_V = partial(
+                    self.paged_load_fp4,
+                    paged_kv_manager,
+                    page_size,
+                    sV,
+                    "V",
+                    seqlen=seqlen.seqlen_k,
+                )
+            else:
+                load_K = partial(
+                    self.paged_load_K, paged_kv_manager, page_size,
+                    tKsK_paged, tKcK_paged, t0KcK_paged, tKpK_paged,
+                    seqlen=seqlen.seqlen_k,
+                )
+                load_V = partial(
+                    self.paged_load_V, paged_kv_manager, page_size,
+                    tVsV_paged, tVcV_paged, t0VcV_paged, tVpV_paged,
+                    seqlen=seqlen.seqlen_k,
+                )
         else:
             # ///////////////////////////////////////////////////////////////////////////////
             # Standard (non-paged) KV path

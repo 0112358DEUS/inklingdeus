@@ -1,4 +1,4 @@
-"""Block-scaled quantized KV pools for the SGLang TRITON lane (GB10 sm_121a).
+"""Block-scaled quantized KV pools for GB10 sm_121a attention backends.
 
 Two subclasses that make the in-image quantized pools usable by
 ``TritonAttnBackend`` + ``kv_quant_attention``:
@@ -15,10 +15,10 @@ Two subclasses that make the in-image quantized pools usable by
     ``ValueError: MXFP8 KV cache requires K and V scale tensors.`` on the very
     first request of the mxfp8 boot test.
 
-``MHATokenToKVPoolFP4Triton``
+``MHATokenToKVPoolFP4Native``
     ``fp4_mx_block16`` storage (packed e2m1 + one UE8M0 scale per 16 elements)
-    with a RAW reader, so attention dequantizes per tile in-kernel instead of
-    materializing the whole pool.
+    with a RAW reader. Triton and the SM121 FA4 development path both consume
+    payload + scales per tile instead of materializing the whole pool.
 
 Both are only ever instantiated when ``--kv-cache-dtype`` selects a quantized
 recipe, so they are structurally inert under ``auto``/bf16.
@@ -153,8 +153,8 @@ class MHATokenToKVPoolMXFP8Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolMX
         )
 
 
-class MHATokenToKVPoolFP4Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4):
-    """fp4_mx_block16 pool read per-tile by the triton kernels.
+class MHATokenToKVPoolFP4Native(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4):
+    """fp4_mx_block16 pool exposed as raw payload plus scale rows.
 
     Differences from ``MHATokenToKVPoolFP4``:
 
@@ -315,3 +315,9 @@ class MHATokenToKVPoolFP4Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4)
             "KV transfer / disaggregation is unsupported for fp4_mx_block16 KV "
             "cache (scale buffers are not exposed)."
         )
+
+
+# Compatibility name retained for the already-proven Triton lane. Both names
+# intentionally resolve to the same class so the champion's page-1 behavior is
+# byte-identical while FA4 can opt into page-128 raw reads.
+MHATokenToKVPoolFP4Triton = MHATokenToKVPoolFP4Native
