@@ -18,6 +18,7 @@ export IMAGE="${IMAGE:-local/sglang-inkling:gb10-kvquant}"
 export INKLING_TORCH_CONV_COMMIT=1 INKLING_COMMIT_STEP_BIAS=1
 export MOE="${MOE:-marlin}" GRAPHS="${GRAPHS:-1}" MEMFRAC="${MEMFRAC:-0.85}" CTX="${CTX:-1048576}"
 export MAXREQ="${MAXREQ:-16}" BLOCK="${BLOCK:-5}"
+export CONTINUOUS_DECODE_STEPS="${CONTINUOUS_DECODE_STEPS:-2}"
 # (--triton-attention-reduce-in-fp32 is already always passed by the underlying launcher.)
 export EXTRA_ARGS="--kv-cache-dtype ${KVD:-fp4_mx_block16} ${EXTRA_ARGS:-}"
 exec "$(dirname "$0")/inkling-sglang-launch.sh" "$RANK"

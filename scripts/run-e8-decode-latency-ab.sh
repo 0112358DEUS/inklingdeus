@@ -14,14 +14,19 @@ GID=${GID:-3}
 IMAGE=${IMAGE:-local/sglang-inkling:gb10-kvquant}
 FP4GEMM=${FP4GEMM:-flashinfer_trtllm}
 CHAMPION_BLOCK=${CHAMPION_BLOCK:-5}
+CHAMPION_CDS=${CHAMPION_CDS:-2}
 RESULT_DIR=${RESULT_DIR:-artifacts/e8-decode-latency}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
 REPS=${REPS:-8}
 TOKENS=${TOKENS:-160}
 # Which factor groups to sweep this session. Every arm is independent, so a partial
 # sweep is still valid — each arm compares only against this session's baseline.
-FACTORS=${FACTORS:-proto cds ksplit}
+FACTORS=${FACTORS:-ksplit}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
+
+case "$CHAMPION_CDS" in
+  *[!0-9]*|0|'') echo "CHAMPION_CDS must be a positive integer" >&2; exit 2 ;;
+esac
 
 mkdir -p "$RESULT_DIR"
 
@@ -108,11 +113,11 @@ PY
 
 # Verify from docker inspect that the arm's single intended factor (and nothing else) is live.
 verify_runtime_contract() {
-  local label=$1 nccl_proto=$2 extra_args=$3
+  local label=$1 nccl_proto=$2 extra_args=$3 decode_steps=$4
   docker inspect inkling-sglang >"$RESULT_DIR/$label-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/$label-worker-inspect.json"
-  python3 - "$nccl_proto" "$extra_args" "$RESULT_DIR/$label-head-inspect.json" \
+  python3 - "$nccl_proto" "$extra_args" "$decode_steps" "$RESULT_DIR/$label-head-inspect.json" \
     "$RESULT_DIR/$label-worker-inspect.json" <<'PY'
 import json
 import sys
@@ -120,7 +125,8 @@ from pathlib import Path
 
 nccl_proto = sys.argv[1]
 extra_args = sys.argv[2].split()
-for path_text in sys.argv[3:]:
+decode_steps = sys.argv[3]
+for path_text in sys.argv[4:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))
     env = payload[0]["Config"]["Env"]
@@ -133,6 +139,14 @@ for path_text in sys.argv[3:]:
         raise SystemExit(f"{path}: unexpected NCCL_PROTO in a non-proto arm: {proto_entries!r}")
     if any(entry.startswith("NCCL_ALGO=") for entry in env):
         raise SystemExit(f"{path}: NCCL_ALGO must not be set in this experiment")
+    decode_flag = "--num-continuous-decode-steps"
+    if command.count(decode_flag) != 1:
+        raise SystemExit(f"{path}: expected exactly one {decode_flag}")
+    actual_decode_steps = command[command.index(decode_flag) + 1]
+    if actual_decode_steps != decode_steps:
+        raise SystemExit(
+            f"{path}: {decode_flag}={actual_decode_steps!r}, expected {decode_steps!r}"
+        )
     if extra_args:
         flag, value = extra_args[0], extra_args[1]
         if command.count(flag) != 1:
@@ -141,7 +155,7 @@ for path_text in sys.argv[3:]:
         if actual != value:
             raise SystemExit(f"{path}: {flag}={actual!r}, expected {value!r}")
     else:
-        for forbidden in ("--num-continuous-decode-steps", "--triton-attention-num-kv-splits"):
+        for forbidden in ("--triton-attention-num-kv-splits",):
             if forbidden in command:
                 raise SystemExit(f"{path}: unexpected {forbidden} in this arm")
 print("runtime contract PASS")
@@ -161,15 +175,16 @@ record_boot_failure() {
   } | tee "$RESULT_DIR/$label-boot-failure.txt" >&2
 }
 
-# start_arm LABEL NCCL_PROTO_VALUE EXTRA_ARGS — empty proto/extra = champion baseline.
+# start_arm LABEL NCCL_PROTO_VALUE EXTRA_ARGS DECODE_STEPS — empty proto/extra = champion baseline.
 start_arm() {
-  local label=$1 nccl_proto=$2 extra_args=$3
+  local label=$1 nccl_proto=$2 extra_args=$3 decode_steps=$4
   stop_arm
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") EXPERIMENT_NCCL_PROTO=$(printf '%q' "$nccl_proto") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$label-worker.log") ./scripts/locked-experiment-launch.sh 1 $(printf '%q' "$FP4GEMM") $(printf '%q' "$CHAMPION_BLOCK") 1 0.85 0 $(printf '%q' "$extra_args") '' </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") EXPERIMENT_NCCL_PROTO=$(printf '%q' "$nccl_proto") EXPERIMENT_CONTINUOUS_DECODE_STEPS=$(printf '%q' "$decode_steps") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$label-worker.log") ./scripts/locked-experiment-launch.sh 1 $(printf '%q' "$FP4GEMM") $(printf '%q' "$CHAMPION_BLOCK") 1 0.85 0 $(printf '%q' "$extra_args") '' </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" EXPERIMENT_NCCL_PROTO="$nccl_proto" \
+    EXPERIMENT_CONTINUOUS_DECODE_STEPS="$decode_steps" \
     LOG="$REPO_DIR/$RESULT_DIR/$label-head.log" \
     "$REPO_DIR/scripts/locked-experiment-launch.sh" \
     0 "$FP4GEMM" "$CHAMPION_BLOCK" 1 0.85 0 "$extra_args" "" </dev/null >/dev/null 2>&1 &
@@ -177,7 +192,7 @@ start_arm() {
     record_boot_failure "$label"
     return 4
   fi
-  verify_runtime_contract "$label" "$nccl_proto" "$extra_args"
+  verify_runtime_contract "$label" "$nccl_proto" "$extra_args" "$decode_steps"
   lossless_gate | tee "$RESULT_DIR/$label-lossless-pre.txt"
   INKLING_URL=http://127.0.0.1:30000 python3 "$REPO_DIR/benchmarks/chat_bench.py" \
     "$label" --task open-ended --reps "$REPS" --tokens "$TOKENS" \
@@ -187,20 +202,21 @@ start_arm() {
 }
 
 # Arms: label, NCCL_PROTO, EXTRA_ARGS. Baseline always runs first, in the same session.
-ARM_SPECS=("e8-baseline||")
+ARM_SPECS=("e8-baseline|||$CHAMPION_CDS")
 read -r -a FACTOR_LIST <<<"$FACTORS"
 for factor in "${FACTOR_LIST[@]}"; do
   case "$factor" in
     proto)
-      ARM_SPECS+=("e8-proto-ll|LL|" "e8-proto-ll128|LL128|" "e8-proto-simple|Simple|")
+      ARM_SPECS+=("e8-proto-ll|LL||$CHAMPION_CDS"
+                  "e8-proto-ll128|LL128||$CHAMPION_CDS"
+                  "e8-proto-simple|Simple||$CHAMPION_CDS")
       ;;
     cds)
-      ARM_SPECS+=("e8-cds-2||--num-continuous-decode-steps 2"
-                  "e8-cds-4||--num-continuous-decode-steps 4")
+      ARM_SPECS+=("e8-cds-1|||1" "e8-cds-4|||4")
       ;;
     ksplit)
-      ARM_SPECS+=("e8-ksplit-4||--triton-attention-num-kv-splits 4"
-                  "e8-ksplit-16||--triton-attention-num-kv-splits 16")
+      ARM_SPECS+=("e8-ksplit-4||--triton-attention-num-kv-splits 4|$CHAMPION_CDS"
+                  "e8-ksplit-16||--triton-attention-num-kv-splits 16|$CHAMPION_CDS")
       ;;
     *) echo "unknown factor '$factor' (valid: proto cds ksplit)" >&2; exit 2 ;;
   esac
@@ -209,8 +225,8 @@ done
 verify_reproducibility
 FAILED_ARMS=()
 for spec in "${ARM_SPECS[@]}"; do
-  IFS='|' read -r label nccl_proto extra_args <<<"$spec"
-  if ! start_arm "$label" "$nccl_proto" "$extra_args"; then
+  IFS='|' read -r label nccl_proto extra_args decode_steps <<<"$spec"
+  if ! start_arm "$label" "$nccl_proto" "$extra_args" "$decode_steps"; then
     [ "$label" = "e8-baseline" ] && { echo "baseline arm failed — no comparison is possible" >&2; exit 4; }
     FAILED_ARMS+=("$label")
   fi

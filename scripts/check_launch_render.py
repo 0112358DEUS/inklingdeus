@@ -117,6 +117,7 @@ def main() -> int:
         "--fp4-gemm-backend": "flashinfer_trtllm",
         "--page-size": "1",
         "--speculative-dspark-block-size": "5",
+        "--num-continuous-decode-steps": "2",
     }
     for flag, value in required_pairs.items():
         assert value_after(command, flag) == value, (flag, value_after(command, flag))
@@ -131,9 +132,14 @@ def main() -> int:
     assert "SGLANG_RAGGED_VERIFY_MODE" not in joined
     assert "NCCL_IB_HCA=rocep1s0f1,roceP2p1s0f1" in joined
 
+    override_cds = render(root, {"CONTINUOUS_DECODE_STEPS": "4"})
+    assert override_cds.count("--num-continuous-decode-steps") == 1
+    assert value_after(override_cds, "--num-continuous-decode-steps") == "4"
+
     e2_command = render_locked(root, fp4_backend="marlin")
     assert value_after(e2_command, "--fp4-gemm-backend") == "marlin"
     assert value_after(e2_command, "--speculative-dspark-block-size") == "5"
+    assert value_after(e2_command, "--num-continuous-decode-steps") == "2"
 
     e3_command = render_locked(root, block="5")
     assert value_after(e3_command, "--speculative-dspark-block-size") == "5"
