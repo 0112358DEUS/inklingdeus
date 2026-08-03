@@ -1,14 +1,43 @@
 # E8 — decode-latency micro-tuning: NCCL protocol, continuous decode steps, KV splits
 
-Status: **NOT RUN — prepared follow-on against the promoted block-5 champion**. No arm has been
-executed; nothing in this branch changes the measured champion's default launch behavior (the new
-`NCCL_ALGO`/`NCCL_PROTO` launcher knobs inject only when explicitly set, and
+Status: **IN PROGRESS — NCCL protocol subgroup complete with no adoption; continuous-decode-step
+subgroup next**. Nothing in this branch changes the measured champion's default launch behavior
+(the new `NCCL_ALGO`/`NCCL_PROTO` launcher knobs inject only when explicitly set, and
 `locked-experiment-launch.sh` pins them empty for every other experiment).
 
 The fail-closed runner was hardened before measurement: it rejects acceptance loss at one combined
 SE for every arm, rejects per-request latency regression at one combined SE for `cds` arms, records
 all planned decisions even when an earlier arm is rejected/inconclusive, and terminates a boot arm
 as soon as its serving container disappears.
+
+## NCCL protocol subgroup — live result
+
+The protocol subgroup ran on control1/control2 on 2026-08-03 from exact repo SHA
+`d104f8bdcaa0be893a1c62996d64b5b87f749824`. Both clean checkouts had repo payload
+`45af9635faf581a57c908762d158bb762fd214be528ee963a96dec4b75b627a3`; both patched images had
+payload `b2272bfef54e3dd37eea30b67a1fa8c3ae54f5f1b4c877e1a6661903a4a8ac61`. Each arm changed only
+`NCCL_PROTO`, passed its two-node runtime contract, and produced byte-identical T4 output before
+and after exact chat-templated open-ended `n=32` measurement.
+
+| arm | tok/s | delta vs baseline | accept | decision |
+|---|---:|---:|---:|---|
+| baseline/autotuned | 26.189 +/- 0.321 | — | 2.132 +/- 0.025 | reference |
+| `LL` | 25.808 +/- 0.385 | -0.381 | 2.148 +/- 0.031 | INCONCLUSIVE — no adoption |
+| `LL128` | 25.852 +/- 0.265 | -0.337 | 2.136 +/- 0.021 | INCONCLUSIVE — no adoption |
+| `Simple` | 26.249 +/- 0.318 | +0.059 | 2.173 +/- 0.026 | INCONCLUSIVE — no adoption |
+
+The `Simple` delta was only 0.059 tok/s against a 0.452 combined SE and missed the predeclared
++0.5 tok/s threshold. The other forced protocols were slower. Acceptance did not regress in any
+arm, but no throughput bar cleared the adoption rule. Keep NCCL protocol autotuning; do not quote
+any forced protocol as a serving improvement.
+
+Evidence is in `artifacts/e8-proto-20260803/`. The four benchmark JSON hashes are
+`9985b289866b3feb87539b8ca465069258e97bdea3f205be3bc10428242f7325`,
+`01dd3cabacc2bd22e463c78fa8b4c4efef1c948f533444653f993de5b8f7afa3`,
+`e8f8d6078c6275f3379809b0dd518c5d0201a40d09d7a4852e24612239af3967`, and
+`46f8995500f3e86da9d1d72d361a73056a060c464a283134b74f29755458881e` in table order. All eight
+pre/post T4 records hash to
+`aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`.
 
 ## Hypothesis and gates
 

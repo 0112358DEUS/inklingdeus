@@ -1,0 +1,42 @@
+reproducibility PASS sha=d104f8bdcaa0be893a1c62996d64b5b87f749824 repo_payload=45af9635faf581a57c908762d158bb762fd214be528ee963a96dec4b75b627a3 image_payload=matched
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 25.21 +/- 0.40  accept 2.066 +/- 0.037
+open-ended/2 n=  8  tok/s 28.19 +/- 0.37  accept 2.265 +/- 0.035
+open-ended/3 n=  8  tok/s 24.84 +/- 0.50  accept 2.037 +/- 0.039
+open-ended/4 n=  8  tok/s 26.51 +/- 0.55  accept 2.159 +/- 0.049
+open-ended   n= 32  tok/s 26.19 +/- 0.32  accept 2.132 +/- 0.025
+T4 LOSSLESS PASS
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.63 +/- 0.40  accept 2.059 +/- 0.036
+open-ended/2 n=  8  tok/s 27.74 +/- 0.87  accept 2.281 +/- 0.074
+open-ended/3 n=  8  tok/s 24.87 +/- 0.64  accept 2.084 +/- 0.054
+open-ended/4 n=  8  tok/s 25.99 +/- 0.66  accept 2.166 +/- 0.057
+open-ended   n= 32  tok/s 25.81 +/- 0.38  accept 2.148 +/- 0.031
+T4 LOSSLESS PASS
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.74 +/- 0.34  accept 2.042 +/- 0.031
+open-ended/2 n=  8  tok/s 27.45 +/- 0.47  accept 2.242 +/- 0.038
+open-ended/3 n=  8  tok/s 25.21 +/- 0.43  accept 2.106 +/- 0.036
+open-ended/4 n=  8  tok/s 26.00 +/- 0.35  accept 2.154 +/- 0.029
+open-ended   n= 32  tok/s 25.85 +/- 0.26  accept 2.136 +/- 0.021
+T4 LOSSLESS PASS
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.28 +/- 0.57  accept 2.018 +/- 0.049
+open-ended/2 n=  8  tok/s 27.44 +/- 0.39  accept 2.238 +/- 0.035
+open-ended/3 n=  8  tok/s 26.02 +/- 0.49  accept 2.171 +/- 0.040
+open-ended/4 n=  8  tok/s 27.25 +/- 0.41  accept 2.265 +/- 0.034
+open-ended   n= 32  tok/s 26.25 +/- 0.32  accept 2.173 +/- 0.026
+T4 LOSSLESS PASS
+A=26.189+/-0.321 tok/s  B=25.808+/-0.385 tok/s  delta=-0.381  combined_se=0.501
+accept A=2.132+/-0.025 B=2.148+/-0.031 delta=+0.016 combined_se=0.040
+INCONCLUSIVE: do not accept or quote a serving improvement
+A=26.189+/-0.321 tok/s  B=25.852+/-0.265 tok/s  delta=-0.337  combined_se=0.416
+accept A=2.132+/-0.025 B=2.136+/-0.021 delta=+0.004 combined_se=0.032
+INCONCLUSIVE: do not accept or quote a serving improvement
+A=26.189+/-0.321 tok/s  B=26.249+/-0.318 tok/s  delta=+0.059  combined_se=0.452
+accept A=2.132+/-0.025 B=2.173+/-0.026 delta=+0.041 combined_se=0.036
+INCONCLUSIVE: do not accept or quote a serving improvement
