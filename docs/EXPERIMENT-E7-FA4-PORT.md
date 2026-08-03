@@ -1,9 +1,9 @@
 # E7 — SM120/121 FA4 paged-KV port
 
-Status: **IN PROGRESS — SPEC-OFF SERVING REJECTED AT NEW WALL #26**. The pinned donor imports and
-passes all 14 real-shape BF16 page-boundary cases on both controls, but the full two-node server dies
-during decode-graph capture because SGLang forwards an unsupported `rel_bias` keyword. No T4 or
-throughput claim exists. No champion image tag, launcher default, or host configuration was changed.
+Status: **IN PROGRESS — SPEC-OFF SCORE-MOD SERVING T4 PASS**. The pinned donor and dedicated
+relative-bias probes pass 14/14 on both controls. Selecting Inkling's guarded FA4 score-mod path
+clears wall #26: the full two-node server captures decode graphs and passes two byte-exact T4 probes.
+DSpark, quality, and performance gates remain. No champion image tag or default was changed.
 
 ## Pinned donor and provenance
 
@@ -76,6 +76,42 @@ both containers were stopped and no T4 was attempted. This is the first dead E7 
 standalone numerical win, not two consecutive dead stages. The next E7 iteration must implement and
 numerically gate a guarded relative-bias adapter before another serve; disabling graphs or dropping
 the bias would be a different factor and is not a retry of this result.
+
+## Stage 3 pre-registration — guarded score-mod relative bias
+
+- **Hypothesis:** Inkling's existing FA4-only score-mod path is the SM121 adapter for wall #26. It
+  adds the same relative logits through the donor's supported `score_mod` and `aux_tensors`
+  interface, while bypassing only the dedicated SM100 shearing optimization.
+- **Expected effect:** correctness only; no throughput claim. A real-shape relative-bias probe must
+  pass 14/14 full/SWA page-boundary cases on both controls before the server is started. The
+  unchanged development image should then reach health and pass two byte-exact T4 probes.
+- **One variable:** set `SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0` inside the separate E7 launch.
+  Image payload, donor, FA4/page-128/BF16, graphs, spec-off, context, network, MoE, and dense-FP4
+  settings stay identical to stage 2. The champion launch leaves this environment variable unset.
+- **Reference gate:** `benchmarks/fa4_sm121_rel_bias_probe.py` uses the real per-rank
+  `Hq=16, Hkv=4, D=128` shape, relative extent 1024, page/SWA boundaries, and the exact Inkling
+  score-mod callable. Require finite output and max absolute error at most 0.05 versus torch.
+- **Kill criterion:** any reference failure, payload/contract drift, boot death, or one-byte T4
+  mismatch rejects this stage. Because that would be the second dead E7 serving stage in a row,
+  E7 must then be parked under the goal's two-dead-stage rule.
+- **Cost:** about one minute for four GPU probes plus one 6–10 minute two-node boot.
+
+## Stage 3 result — pass, wall #26 cleared for spec-off
+
+The exact runner commit was `a9d4857ccf7ed586429f68bf0563a05e06a2a120`. Both controls matched
+repository, champion-image, and FA4-image payloads. The base paged-KV probe passed 14/14 on each,
+and the new relative-bias probe passed 14/14 on each with worst max absolute error
+0.0023084282875061035 against the torch reference (limit 0.05).
+
+With only `SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0` added to the separate development launch, both
+ranks loaded, allocated BF16 page-128 pools, and captured all 12 full decode graph sizes. Docker
+inspection proved FA4/page-128/BF16/spec-off/score-mod on both ranks. Two consecutive T4 probes then
+matched byte-for-byte. The runner stopped both containers afterward.
+
+This is a serving-correctness stage, not a throughput adoption. Wall #26 is resolved without
+dropping relative bias or changing the donor: the existing Inkling score-mod callable carries the
+same relative logits through the donor's supported auxiliary-tensor interface. Next is a separately
+pre-registered DSpark-on-FA4 T4 gate; the champion remains triton/page-1/FP4 KV.
 
 ## Why this is not a config experiment
 

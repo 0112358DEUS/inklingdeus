@@ -13,8 +13,15 @@ IMAGE=${IMAGE:-local/sglang-inkling:fa4-sm121-dev}
 CHAMPION_IMAGE=${CHAMPION_IMAGE:-local/sglang-inkling:gb10-kvquant}
 RESULT_DIR=${RESULT_DIR:-artifacts/e7-fa4-specoff}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
+REL_BIAS_MODE=${REL_BIAS_MODE:-sheared}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 LABEL=e7-fa4-bf16-specoff
+
+case "$REL_BIAS_MODE" in
+  sheared) INKLING_SHEARED_BIAS= ;;
+  scoremod) INKLING_SHEARED_BIAS=0 ;;
+  *) echo "REL_BIAS_MODE must be sheared or scoremod" >&2; exit 2 ;;
+esac
 
 mkdir -p "$RESULT_DIR"
 
@@ -74,6 +81,7 @@ verify_reproducibility() {
   {
     printf 'repo_sha=%s\nrepo_payload=%s\n' "$local_sha" "$local_payload"
     printf 'fa4_payload=%s\nchampion_payload=%s\n' "$local_fa4" "$champion_payload"
+    printf 'rel_bias_mode=%s\n' "$REL_BIAS_MODE"
     printf 'head_champion_id='
     docker image inspect "$CHAMPION_IMAGE" --format '{{.Id}}'
     printf 'worker_champion_id='
@@ -99,6 +107,18 @@ run_numerics() {
     "$RESULT_DIR/control1-paged-bf16-numerics.log"
   grep -q 'FA4 PAGED BF16 NUMERICS PASS cases=14' \
     "$RESULT_DIR/control2-paged-bf16-numerics.log"
+  if [ "$REL_BIAS_MODE" = scoremod ]; then
+    docker run --rm --gpus all -v "$REPO_DIR:/repo:ro" \
+      --entrypoint python3 "$IMAGE" /repo/benchmarks/fa4_sm121_rel_bias_probe.py \
+      >"$RESULT_DIR/control1-rel-bias-numerics.log" 2>&1
+    ssh -o BatchMode=yes "$WORKER_SSH" \
+      "docker run --rm --gpus all -v $(printf '%q' "$WORKER_REPO:/repo:ro") --entrypoint python3 $(printf '%q' "$IMAGE") /repo/benchmarks/fa4_sm121_rel_bias_probe.py" \
+      >"$RESULT_DIR/control2-rel-bias-numerics.log" 2>&1
+    grep -q 'FA4 REL BIAS NUMERICS PASS cases=14' \
+      "$RESULT_DIR/control1-rel-bias-numerics.log"
+    grep -q 'FA4 REL BIAS NUMERICS PASS cases=14' \
+      "$RESULT_DIR/control2-rel-bias-numerics.log"
+  fi
 }
 
 wait_ready() {
@@ -140,13 +160,14 @@ capture_runtime_contract() {
   docker inspect inkling-sglang >"$RESULT_DIR/$LABEL-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/$LABEL-worker-inspect.json"
-  python3 - "$IMAGE" "$RESULT_DIR/$LABEL-head-inspect.json" \
+  python3 - "$IMAGE" "$REL_BIAS_MODE" "$RESULT_DIR/$LABEL-head-inspect.json" \
     "$RESULT_DIR/$LABEL-worker-inspect.json" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 expected_image = sys.argv[1]
+rel_bias_mode = sys.argv[2]
 required_pairs = {
     "--attention-backend": "fa4",
     "--page-size": "128",
@@ -161,7 +182,7 @@ required_flags = {
     "--disable-piecewise-cuda-graph",
     "--disable-prefill-cuda-graph",
 }
-for path_text in sys.argv[2:]:
+for path_text in sys.argv[3:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     command = payload["Config"]["Cmd"]
@@ -188,7 +209,23 @@ for path_text in sys.argv[2:]:
     present = forbidden.intersection(command)
     if present:
         raise SystemExit(f"{path}: forbidden spec-off flags: {sorted(present)}")
-print("E7 runtime contract PASS attention=fa4 page=128 kv=bf16 spec=off")
+    env = set(payload["Config"]["Env"])
+    bias_env = {
+        value for value in env if value.startswith("SGLANG_OPT_USE_INKLING_SHEARED_BIAS=")
+    }
+    expected_bias_env = (
+        {"SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0"}
+        if rel_bias_mode == "scoremod"
+        else set()
+    )
+    if bias_env != expected_bias_env:
+        raise SystemExit(
+            f"{path}: relative-bias env={sorted(bias_env)}, expected={sorted(expected_bias_env)}"
+        )
+print(
+    "E7 runtime contract PASS attention=fa4 page=128 kv=bf16 "
+    f"spec=off rel_bias={rel_bias_mode}"
+)
 PY
 }
 
@@ -233,13 +270,14 @@ start_server() {
   stop_arm
   wait_stopped
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$LABEL-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=0 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$LABEL-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=0 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=$(printf '%q' "$INKLING_SHEARED_BIAS") MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/$LABEL-head.log" \
     ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 \
     SPEC=0 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
-    MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= \
+    INKLING_SHEARED_BIAS="$INKLING_SHEARED_BIAS" MAXREQ=16 PAGE=128 \
+    CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= \
     "$REPO_DIR/scripts/inkling-sglang-launch.sh" 0 </dev/null >/dev/null 2>&1 &
 }
 
@@ -253,5 +291,5 @@ fi
 capture_runtime_contract | tee "$RESULT_DIR/runtime-contract.txt"
 lossless_gate "$RESULT_DIR/lossless-1.json" | tee "$RESULT_DIR/lossless-1.txt"
 lossless_gate "$RESULT_DIR/lossless-2.json" | tee "$RESULT_DIR/lossless-2.txt"
-echo "PASS: FA4 BF16 page-128 spec-off serving reached health and two exact T4 gates" \
+echo "PASS: FA4 BF16 page-128 spec-off serving reached health and two exact T4 gates (rel_bias=$REL_BIAS_MODE)" \
   | tee "$RESULT_DIR/decision.txt"

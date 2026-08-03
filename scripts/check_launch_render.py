@@ -155,6 +155,7 @@ def main() -> int:
     assert not missing, f"missing champion flags: {sorted(missing)}"
     joined = " ".join(command)
     assert "SGLANG_RAGGED_VERIFY_MODE" not in joined
+    assert "SGLANG_OPT_USE_INKLING_SHEARED_BIAS" not in joined
     assert "NCCL_IB_HCA=rocep1s0f1,roceP2p1s0f1" in joined
 
     override_cds = render(root, {"CONTINUOUS_DECODE_STEPS": "4"})
@@ -255,6 +256,7 @@ def main() -> int:
             "GRAPHS": "1",
             "MEMFRAC": "0.85",
             "CONTINUOUS_DECODE_STEPS": "2",
+            "INKLING_SHEARED_BIAS": "0",
         },
     )
     e7_pairs = {
@@ -272,6 +274,7 @@ def main() -> int:
     assert "--speculative-algorithm" not in e7_command
     assert "--disable-piecewise-cuda-graph" in e7_command
     assert "--disable-prefill-cuda-graph" in e7_command
+    assert "SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0" in " ".join(e7_command)
     print("launch render PASS")
     return 0
 
