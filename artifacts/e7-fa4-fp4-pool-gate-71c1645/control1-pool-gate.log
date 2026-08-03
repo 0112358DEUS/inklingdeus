@@ -1,0 +1,13 @@
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/usr/local/lib/python3.12/dist-packages/torchao/quantization/quant_api.py:1731: SyntaxWarning: invalid escape sequence '\.'
+  """Configuration class for applying different quantization configs to modules or parameters based on their fully qualified names (FQNs).
+{"gate": "ordinary_target_writer", "k_payload": true, "k_scale": true, "rows": 3, "v_payload": true, "v_scale": true}
+{"gate": "radix_move", "k_payload": true, "k_scale": true, "rows": 3, "v_payload": true, "v_scale": true}
+{"gate": "dspark_prefix_valid_writer", "k_payload": true, "k_scale": true, "rows": 3, "v_payload": true, "v_scale": true}
+{"all_zero": true, "gate": "prefix_valid_mask", "rejected_rows": 3}
+{"gate": "swa_wrapper_full_writer", "k_payload": true, "k_scale": true, "rows": 2, "v_payload": true, "v_scale": true}
+{"gate": "swa_wrapper_local_writer", "k_payload": true, "k_scale": true, "rows": 2, "v_payload": true, "v_scale": true}
+{"full": true, "gate": "swa_radix_move", "swa": true}
+{"finite": true, "gate": "no_pool_sized_bf16_allocation", "logical_bf16_bytes": 537133056, "peak_delta_bytes": 4096, "peak_limit_bytes": 67108864, "pool_tokens": 262144, "raw_bytes": 151068672, "storage_ratio": 0.28125}
+FA4 FP4 POOL GATE PASS writers=4 allocation=fixed-tile

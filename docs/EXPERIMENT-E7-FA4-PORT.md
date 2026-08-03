@@ -308,6 +308,26 @@ DSpark serving-correctness gates plus the usable-capacity threshold. Dedicated p
 writer fixtures and the no-pool-sized-BF16 allocation audit remain before quality/performance
 promotion; no champion or default changed.
 
+### Stage 5A pool integrity result — dual-control pass
+
+Exact test commit `71c164532b71aa37ad9a2cf5550d46b6bc53b31d` ran against the unchanged
+SparkFlash image payload on both controls. The GPU fixture compared every destination row against
+SGLang's reference FP4 quantizer and passed ordinary target writes, prefix-valid DSpark injection,
+SWA full/local routing, direct radix moves, and hybrid-SWA radix moves. In every case K/V payload
+and K/V scale bytes moved together; uncommitted prefix-valid destinations remained zero.
+
+The allocation fixture then created a 262,144-token pool, whose logical BF16 K/V size is
+537,133,056 bytes. Its packed payload plus scales occupied 151,068,672 bytes, exactly 0.28125 of
+BF16 (3.5556× capacity). After a warm call, an FA4 attention call over the large raw pool added
+only 4,096 peak allocated bytes on each control, versus the predeclared 67,108,864-byte ceiling.
+The raw accessors returned uint8 storage and source inspection confirmed that they contain no
+whole-pool `batched_dequantize` call.
+
+Raw dual-control logs, identity, machine-checked contract, and decision are in
+`artifacts/e7-fa4-fp4-pool-gate-71c1645/`. Stage 5A has now cleared its primitive, writer,
+allocation, capacity, spec-off serving, DSpark serving, and T4 gates. Quality, 1M-context behavior,
+performance, energy, soak, and upstream readiness remain; the champion is still unchanged.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:

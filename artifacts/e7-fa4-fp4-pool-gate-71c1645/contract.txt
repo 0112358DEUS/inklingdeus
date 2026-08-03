@@ -1,0 +1,3 @@
+control1-pool-gate.log PASS writers=4 pool_tokens=262144 peak_delta_bytes=4096 storage_ratio=0.28125
+control2-pool-gate.log PASS writers=4 pool_tokens=262144 peak_delta_bytes=4096 storage_ratio=0.28125
+DUAL-CONTROL FA4 FP4 POOL CONTRACT PASS

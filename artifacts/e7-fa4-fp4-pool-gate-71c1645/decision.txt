@@ -1,0 +1,1 @@
+PASS: dual-control FP4 payload+scale writers and fixed-tile allocation
