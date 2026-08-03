@@ -29,6 +29,7 @@ docker create --name "$CONTAINER" --entrypoint bash "$SOURCE_IMAGE" -lc "
     $SGL/kernels/ops/attention/flash_attention.py \
     $SGL/kernels/ops/attention/flash_attention_v4.py \
     $SGL/srt/server_args.py \
+    $SGL/srt/entrypoints/openai/serving_tokenize.py \
     $SGL/srt/mem_cache/kv_quant_pools.py \
     $SGL/srt/mem_cache/kv_cache_configurator.py
 " >/dev/null

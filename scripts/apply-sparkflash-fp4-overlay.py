@@ -25,6 +25,7 @@ def main() -> int:
     wrapper = root / "kernels/ops/attention/flash_attention_v4.py"
     backend = root / "srt/layers/attention/flashattention_backend.py"
     server_args = root / "srt/server_args.py"
+    serving_tokenize = root / "srt/entrypoints/openai/serving_tokenize.py"
 
     replace_exact(
         dispatcher,
@@ -248,6 +249,17 @@ def main() -> int:
                             KV4_FA4_MHA_BACKEND_CHOICES.append("fa4")
                         assert decode_backend in KV4_FA4_MHA_BACKEND_CHOICES, (
 """,
+    )
+
+    replace_exact(
+        serving_tokenize,
+        '''            max_model_len = getattr(tokenizer, "model_max_length", -1)
+''',
+        '''            # Hugging Face uses an enormous integer sentinel when the
+            # tokenizer has no intrinsic length limit. ORJSON rejects that
+            # value even though SGLang already resolved the runtime limit.
+            max_model_len = self.tokenizer_manager.model_config.context_len
+''',
     )
 
     print("SPARKFLASH FP4 SGLANG OVERLAY PASS")

@@ -1,0 +1,1 @@
+{"failure_class":"tokenize_response_serialization","model_completion_started":false,"niah_verdict":null,"pre_quality_t4_passed":true,"root_cause":"TokenizeResponse.max_model_len copied tokenizer sentinel 1000000000000000019884624838656, which ORJSON rejects as exceeding 64-bit range","runtime_capacity_passed":true,"schema_version":1}

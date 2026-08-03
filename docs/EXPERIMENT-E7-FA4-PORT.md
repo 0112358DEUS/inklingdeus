@@ -525,3 +525,24 @@ The upstream constraint source is SGLang's
 
 Until the serving, quality, and performance gates pass, E7 remains a development lane—not a flag
 to add to the champion `EXTRA_ARGS` and not a reason to change either control's configuration.
+
+### Stage 5A.4 quality attempt 1 — runtime passes, tokenizer API seam blocks NIAH
+
+Exact runner commit `e95e839` and scalar SparkFlash image payload
+`8b88229301b6b5817cec177c7570d8b1ee24a88640c24bb2d75aeb09f4b11a7f` matched across both
+controls. The DSpark block-5 server allocated 1,280,768 full-layer tokens, 23,784 above the gate;
+captured every target and draft graph tier through batch 16; reached health at 1,048,576 context;
+and passed the pre-quality byte-exact T4 gate.
+
+The first NIAH calibration call then stopped before generation because `/v1/tokenize` returned
+HTTP 500. The traceback ended in ORJSON with `Integer exceeds 64-bit range`. Source and model
+inspection identified the sole out-of-range response field: the tokenizer's conventional
+no-intrinsic-limit sentinel `1000000000000000019884624838656` was exposed as `max_model_len`.
+This is an API serialization failure, not a NIAH answer or model-quality failure. Both containers
+were stopped and the incomplete run was preserved in
+`artifacts/e7-fa4-fp4-quality-e95e839/`.
+
+The bounded retry changes only that serving metadata seam: `/v1/tokenize` reports SGLang's
+resolved `model_config.context_len`. A new fail-closed preflight requires a consistent token list
+and count plus `max_model_len=1048576` before T4 and NIAH. Kernel, FP4 representation, DSpark,
+memory, graph, model, benchmark prompts, and quality thresholds remain unchanged.

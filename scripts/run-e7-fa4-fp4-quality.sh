@@ -218,6 +218,41 @@ print(
 PY
 }
 
+verify_tokenize_contract() {
+  python3 - "$RESULT_DIR/tokenize-contract.json" <<'PY'
+import json
+import sys
+import urllib.request
+from pathlib import Path
+
+request = urllib.request.Request(
+    "http://127.0.0.1:30000/v1/tokenize",
+    data=json.dumps({
+        "model": "inkling-small",
+        "messages": [{"role": "user", "content": "tokenize contract probe"}],
+        "reasoning_effort": "none",
+    }).encode(),
+    headers={"Content-Type": "application/json"},
+)
+with urllib.request.urlopen(request, timeout=300) as response:
+    payload = json.load(response)
+tokens = payload.get("tokens")
+count = payload.get("count")
+if not isinstance(tokens, list) or not all(isinstance(token, int) for token in tokens):
+    raise SystemExit("TOKENIZE CONTRACT FAIL: tokens is not List[int]")
+if not isinstance(count, int) or count != len(tokens):
+    raise SystemExit("TOKENIZE CONTRACT FAIL: inconsistent count/token list")
+if payload.get("max_model_len") != 1048576:
+    raise SystemExit(
+        "TOKENIZE CONTRACT FAIL: effective max_model_len is not runtime context"
+    )
+Path(sys.argv[1]).write_text(
+    json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8"
+)
+print(f"TOKENIZE CONTRACT PASS count={count} max_model_len=1048576")
+PY
+}
+
 verify_reproducibility
 python3 "$REPO_DIR/benchmarks/gsm8k_eval.py" "$GSM8K_DATA" \
   --responses "$RESULT_DIR/gsm8k-responses.jsonl" \
@@ -229,6 +264,7 @@ if ! wait_ready; then
   exit 4
 fi
 verify_runtime_and_capacity
+verify_tokenize_contract | tee "$RESULT_DIR/tokenize-contract.txt"
 lossless_gate "$RESULT_DIR/lossless-before-quality.json" \
   | tee "$RESULT_DIR/lossless-before-quality.txt"
 
