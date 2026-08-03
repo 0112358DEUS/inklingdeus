@@ -445,6 +445,23 @@ after health and before T4 or performance measurement. No MTP serving-correctnes
 is made. Raw identities, weight hash, runtime inspections, both rank logs, and the failed capacity
 contract are in `artifacts/e7-fa4-fp4-mtp-width1-18ff162/`.
 
+### Stage 5A.3 pre-registration — minimal MTP capacity rescue
+
+- **Hypothesis:** the native-MTP rung missed the capacity gate by only 3,736 tokens, approximately
+  23-30 MB across its target/SWA/draft FP4 pool geometry. Raising the isolated candidate's static
+  memory fraction from 0.850 to 0.851 adds roughly 128 MB of budget and should clear the target
+  without reducing graph coverage or request concurrency.
+- **Only changed factor:** `--mem-fraction-static 0.851`. Native EAGLE width 1, scalar FA4 reader,
+  FP4 format, page 128, score-mod, all 12 graph tiers through batch 16, max requests 16, context
+  64K, transport, and model backends remain byte-for-byte identical to Stage 5A.2.
+- **Safety/correctness gate:** usable full tokens >=1,256,984; all graphs capture; post-capture
+  available GPU memory remains at least 13 GB on rank 0; runtime proves no external draft; health
+  and two exact T4 requests pass. Both containers are stopped afterward.
+- **Kill criterion:** any capacity miss, post-capture headroom below 13 GB, graph/health/T4 failure,
+  or runtime drift rejects the rescue. Do not try 0.852 or remove graph tiers inside this rung.
+- **No adoption claim:** a pass permits one power-instrumented, same-session DSpark-versus-MTP A/B;
+  it does not change the champion's 0.85 default.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
