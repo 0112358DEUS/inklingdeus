@@ -17,6 +17,7 @@ REL_BIAS_MODE=${REL_BIAS_MODE:-sheared}
 SPEC_MODE=${SPEC_MODE:-off}
 BLOCK=${BLOCK:-5}
 KV_MODE=${KV_MODE:-bf16}
+FP4_MIN_FULL_TOKENS=${FP4_MIN_FULL_TOKENS:-1256984}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
 case "$REL_BIAS_MODE" in
@@ -308,6 +309,36 @@ verify_speculator_log() {
   printf 'DSpark runtime log PASS block=%s draft-runner=initialized graph=folded\n' "$BLOCK"
 }
 
+verify_fp4_capacity() {
+  [ "$KV_MODE" = fp4 ] || return 0
+  python3 - "$RESULT_DIR/$LABEL-head.log" "$FP4_MIN_FULL_TOKENS" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+log_path = Path(sys.argv[1])
+minimum = int(sys.argv[2])
+text = log_path.read_text(encoding="utf-8", errors="replace")
+matches = re.findall(
+    r"Use sliding window memory pool\. full_layer_tokens=(\d+), "
+    r"swa_layer_tokens=(\d+)",
+    text,
+)
+if not matches:
+    raise SystemExit(f"{log_path}: missing FP4 full/SWA capacity record")
+full, swa = map(int, matches[0])
+if full < minimum:
+    raise SystemExit(
+        f"FP4 CAPACITY FAIL full_layer_tokens={full} minimum={minimum} "
+        f"swa_layer_tokens={swa}"
+    )
+print(
+    f"FP4 CAPACITY PASS full_layer_tokens={full} minimum={minimum} "
+    f"headroom={full - minimum} swa_layer_tokens={swa}"
+)
+PY
+}
+
 lossless_gate() {
   local output_path=$1
   python3 - "$output_path" <<'PY'
@@ -368,11 +399,12 @@ if ! wait_ready; then
   record_boot_failure
   exit 4
 fi
+verify_fp4_capacity | tee "$RESULT_DIR/capacity-contract.txt"
 capture_runtime_contract | tee "$RESULT_DIR/runtime-contract.txt"
 if [ "$SPEC_MODE" = dspark ]; then
   verify_speculator_log | tee "$RESULT_DIR/speculator-contract.txt"
 fi
 lossless_gate "$RESULT_DIR/lossless-1.json" | tee "$RESULT_DIR/lossless-1.txt"
 lossless_gate "$RESULT_DIR/lossless-2.json" | tee "$RESULT_DIR/lossless-2.txt"
-echo "PASS: FA4 BF16 page-128 $SPEC_LABEL serving reached health and two exact T4 gates (rel_bias=$REL_BIAS_MODE)" \
+echo "PASS: FA4 $KV_MODE page-128 $SPEC_LABEL serving reached health and two exact T4 gates (rel_bias=$REL_BIAS_MODE)" \
   | tee "$RESULT_DIR/decision.txt"
