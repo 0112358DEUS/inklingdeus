@@ -38,7 +38,7 @@ North-star distance on the adopted E8 steps-2 champion:
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
 | Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
 | Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
-| Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
+| Q4 concurrency curves | **READY — NOT RUN** | Authoritative chat-templated n=32 at C1/2/4/8/16. The pinned Mia-shaped 512-token diagnostic adds C1/2/3/4/6/8 at n=48 per level, replicated and T4-bracketed; targets C1 >=33.9 and C8 aggregate >=74.9 without changing N1. See `docs/MIAAI-BENCHMARK-CROSSWALK.md`. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
 Exhaustion counter: **0 / 4**. E7's two-control score-mod numerical and spec-off T4 serving proof is
