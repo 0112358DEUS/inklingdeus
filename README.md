@@ -253,7 +253,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `scripts/run-e2-fp4-gemm-ab.sh` | same-session dense FP4 backend experiment with GPU numerical gate |
 | `scripts/run-e3-block-sweep.sh` | block 5/6/7 sweep with native accept-by-position evidence |
 | `scripts/run-e4-width1-mtp-ab.sh` | DSpark block 5 vs native width-1 MTP; E4 rejected at wall #24 |
-| `scripts/run-e5-jit-cache-ab.sh` | balanced cold/prime/warm boot experiment for opt-in compiler-cache mounts |
+| `scripts/run-e5-jit-cache-ab.sh` | completed eight-boot cache experiment; 6% warm saving was inconclusive, mounts remain off |
 | `scripts/run-e6-memfrac-ab.sh` | MEMFRAC 0.85/0.68 C8/C16 experiment with host-memory evidence |
 | `scripts/run-e8-decode-latency-ab.sh` | completed one-factor E8 sweep; adopted CDS=2, retained NCCL autotuning and KV splits 8 |
 | `scripts/run-e8-cds2-adoption.sh` | exact-SHA champion runtime contract, T4, and all-task adoption gate |
@@ -298,7 +298,7 @@ measurable) · `MAXREQ` · `BLOCK` (**5 is the accepted E3 champion**) · `KVD` 
 `nvfp4-kv-boot.sh`) · `CONTINUOUS_DECODE_STEPS` (**2 is the accepted E8 champion**) · `GRAPH_BS` ·
 `IMAGE` · `EXTRA_ARGS` · `LOG` (server log path, default
 `~/inkling-serve.log` — the verify grep reads this) · `PERSIST_JIT_CACHE=1` plus an absolute
-`JIT_CACHE_ROOT` (E5 opt-in; default off pending hardware proof) · `INKLING_DRAFT_CTX_CAP` (default 65536; pins
+`JIT_CACHE_ROOT` (E5 opt-in; default off after an inconclusive 6% warm-boot saving) · `INKLING_DRAFT_CTX_CAP` (default 65536; pins
 the draft to its 64K adaptation so a huge declared context doesn't crater acceptance — baked patch #6).
 
 Ranked runners after E3 also accept `CHAMPION_BLOCK` (default `5`) and
