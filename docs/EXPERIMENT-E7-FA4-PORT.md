@@ -288,6 +288,26 @@ FP4 storage for spec-off serving correctness and the target-capacity moonshot ga
 a DSpark, 1M NIAH, quality, throughput, or adoption result; the next gate reuses this exact image
 and changes only speculation from off to DSpark block 5.
 
+### Stage 5A DSpark result — serving correctness pass
+
+The next runner reused exact commit `9f62de49ca6318a8008d03750e06eb8d24683751` and the identical
+`8b88229301b6b5817cec177c7570d8b1ee24a88640c24bb2d75aeb09f4b11a7f` image payload.
+The only serving change was enabling DSpark block 5. Both controls again passed the 14-case FP4
+paged numerical probe before launch.
+
+Target and draft loaded with native FP4 KV. The target retained `full_layer_tokens=1280896` and
+`swa_layer_tokens=128000`, clearing the 1,256,984-token gate by 23,912 tokens while the draft also
+allocated its separate 1,280,896-token FP4 pool. Runtime logs prove gamma 5, FA4 for target and
+draft, all 12 six-token target verify graph tiers, all 12 five-token draft tiers, and the greedy
+proposal folded into the draft CUDA graph. The locked container inspection passed on both ranks,
+the server reached health, and two consecutive T4 responses matched byte-for-byte. The runner
+then stopped both containers.
+
+Raw evidence is in `artifacts/e7-fa4-fp4-dspark-b5-9f62de4/`. This clears the Stage 5A spec-off and
+DSpark serving-correctness gates plus the usable-capacity threshold. Dedicated payload-plus-scale
+writer fixtures and the no-pool-sized-BF16 allocation audit remain before quality/performance
+promotion; no champion or default changed.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
