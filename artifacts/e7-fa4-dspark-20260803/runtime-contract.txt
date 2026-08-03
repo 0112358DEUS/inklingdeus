@@ -1,0 +1,1 @@
+E7 runtime contract PASS attention=fa4 page=128 kv=bf16 spec=dspark block=5 rel_bias=scoremod

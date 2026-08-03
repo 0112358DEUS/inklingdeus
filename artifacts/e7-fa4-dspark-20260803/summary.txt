@@ -1,0 +1,8 @@
+ACCEPT STAGE — DSPARK BLOCK 5 ON FA4 SCORE-MOD
+repo_sha=14b8c31457f7f43ca3b9d57c5e26c6779c579b99
+preflight=PASS base paged-KV 14/14 and relative-bias 14/14 on both controls
+runtime=PASS target and draft attention fa4, page 128, BF16 KV, DSpark block 5, score-mod bias
+graphs=PASS all 12 target verify tiers; DSpark proposal folded into draft graph
+t4=PASS twice, byte exact
+shutdown=worker connection-reset traceback follows the runner's successful gate and intentional rank-0 stop
+decision=DSpark-on-FA4 serving correctness clears; depth, GSM8K, tool, and performance gates remain

@@ -1,0 +1,19 @@
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/usr/local/lib/python3.12/dist-packages/torchao/quantization/quant_api.py:1731: SyntaxWarning: invalid escape sequence '\.'
+  """Configuration class for applying different quantization configs to modules or parameters based on their fully qualified names (FQNs).
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "full"}
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "swa512"}
+{"finite": true, "length": 127, "max_abs": 0.0018123388290405273, "mean_abs": 0.00023727469670120627, "mode": "full"}
+{"finite": true, "length": 127, "max_abs": 0.0018123388290405273, "mean_abs": 0.00023727469670120627, "mode": "swa512"}
+{"finite": true, "length": 128, "max_abs": 0.001589059829711914, "mean_abs": 0.0002304021909367293, "mode": "full"}
+{"finite": true, "length": 128, "max_abs": 0.001589059829711914, "mean_abs": 0.0002304021909367293, "mode": "swa512"}
+{"finite": true, "length": 129, "max_abs": 0.0015932321548461914, "mean_abs": 0.00022992979211267084, "mode": "full"}
+{"finite": true, "length": 129, "max_abs": 0.0015932321548461914, "mean_abs": 0.00022992979211267084, "mode": "swa512"}
+{"finite": true, "length": 511, "max_abs": 0.000692412257194519, "mean_abs": 0.00012476187839638442, "mode": "full"}
+{"finite": true, "length": 511, "max_abs": 0.000692412257194519, "mean_abs": 0.00012476187839638442, "mode": "swa512"}
+{"finite": true, "length": 512, "max_abs": 0.000667959451675415, "mean_abs": 0.00012215589231345803, "mode": "full"}
+{"finite": true, "length": 512, "max_abs": 0.000667959451675415, "mean_abs": 0.00012215589231345803, "mode": "swa512"}
+{"finite": true, "length": 513, "max_abs": 0.0007243454456329346, "mean_abs": 0.00012962741311639547, "mode": "full"}
+{"finite": true, "length": 513, "max_abs": 0.000731244683265686, "mean_abs": 0.00012769992463290691, "mode": "swa512"}
+FA4 PAGED BF16 NUMERICS PASS cases=14
