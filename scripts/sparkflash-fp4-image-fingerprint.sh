@@ -9,6 +9,7 @@ docker run --rm --entrypoint sh "$IMAGE" -c '
 set -eu
 sha256sum \
   /sgl-workspace/sglang/python/sglang/srt/layers/attention/flashattention_backend.py \
+  /sgl-workspace/sglang/python/sglang/kernels/ops/attention/flash_attention.py \
   /sgl-workspace/sglang/python/sglang/kernels/ops/attention/flash_attention_v4.py \
   /sgl-workspace/sglang/python/sglang/srt/server_args.py \
   /sgl-workspace/sglang/python/sglang/srt/mem_cache/kv_quant_pools.py \

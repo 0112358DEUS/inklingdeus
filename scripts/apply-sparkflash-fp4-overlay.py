@@ -21,9 +21,63 @@ def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("usage: apply-sparkflash-fp4-overlay.py SGLANG_PACKAGE_ROOT")
     root = Path(sys.argv[1]).resolve()
+    dispatcher = root / "kernels/ops/attention/flash_attention.py"
     wrapper = root / "kernels/ops/attention/flash_attention_v4.py"
     backend = root / "srt/layers/attention/flashattention_backend.py"
     server_args = root / "srt/server_args.py"
+
+    replace_exact(
+        dispatcher,
+        """    sfq=None,
+    sfk=None,
+    sfv=None,
+    rel_bias=None,
+""",
+        """    sfq=None,
+    sfk=None,
+    sfv=None,
+    kv_fp4=False,
+    rel_bias=None,
+""",
+        expected=2,
+    )
+    replace_exact(
+        dispatcher,
+        """    if ver == 3:
+        return fa3_flash_attn_with_kvcache(
+""",
+        """    if ver == 3:
+        if kv_fp4:
+            raise RuntimeError("FP4 KV is supported only by FlashAttention version 4")
+        return fa3_flash_attn_with_kvcache(
+""",
+    )
+    replace_exact(
+        dispatcher,
+        """    if ver == 3:
+        return fa3_flash_attn_varlen_func(
+""",
+        """    if ver == 3:
+        if kv_fp4:
+            raise RuntimeError("FP4 KV is supported only by FlashAttention version 4")
+        return fa3_flash_attn_varlen_func(
+""",
+    )
+    replace_exact(
+        dispatcher,
+        """            sfq=sfq,
+            sfk=sfk,
+            sfv=sfv,
+            rel_bias=rel_bias,
+""",
+        """            sfq=sfq,
+            sfk=sfk,
+            sfv=sfv,
+            kv_fp4=kv_fp4,
+            rel_bias=rel_bias,
+""",
+        expected=2,
+    )
 
     replace_exact(
         wrapper,

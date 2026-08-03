@@ -246,6 +246,27 @@ This clears only the isolated reader primitive. Live SGLang backend plumbing, th
 gate, allocation proof, usable-capacity log, serving health, and byte-exact T4 remain pending; no
 champion or control default changed.
 
+### Stage 5A serving attempts 1-2 — capacity clears, dispatch seams reject
+
+The first isolated serving attempt failed before model load because SGLang's stock FP4/FA4
+compatibility table rejected `fa4` as a decode backend (wall #27). The next exact image narrowed
+that exception to `fp4_mx_block16` on SM120-family hardware with page size 128.
+
+The second attempt cleared that route, loaded both ranks, and allocated
+`full_layer_tokens=1445504` plus `swa_layer_tokens=144512`. The usable full-attention capacity is
+188,520 tokens (14.998%) above the 1,256,984-token gate. Per-rank logs reported 2.71 GB for each
+full K/V payload, 1.36 GB for each SWA K/V payload, 8.14 GB for the combined SWA pool, and
+16.93 GB still available when target decode-graph capture began.
+
+The first batch-16 graph then failed before health with
+`flash_attn_with_kvcache() got an unexpected keyword argument 'kv_fp4'`. Runtime inspection tied
+the callable to `sglang.kernels.ops.attention.flash_attention`, whose generic signature lacked the
+marker even though its existing `ver == 4` branch calls the already extended FA4 wrapper. This is
+wall #28: the next image adds a fail-closed, version-4-only generic dispatch seam and changes no
+kernel, cache format, model, graph, network, or champion flag. The two failed launches exhaust the
+original Stage 5A serving-attempt bound; this documented dispatch correction starts the next
+bounded routing rung. Neither attempt reached health or T4, and both containers were stopped.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
