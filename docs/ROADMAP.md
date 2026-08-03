@@ -10,7 +10,8 @@ at its predeclared boot-dead gate. E8 retained NCCL autotuning after three force
 produced no adoptable gain, then accepted continuous decode steps 2 at +0.645 tok/s with acceptance
 and latency improvements. The exact-default all-task adoption gate passed. E8 then retained 8 KV
 splits after both alternatives lost. E5's first session localized manifest wall #25; its clean-root
-restart cleared that wall but rejected cache adoption as too small. E6 is next.
+restart cleared that wall but rejected cache adoption as too small. E6 is on HOLD because its
+mandatory read-only preflight found `earlyoom` absent on both nodes; E7 is next for review.
 
 North-star distance on the adopted E8 steps-2 champion:
 
@@ -29,17 +30,17 @@ North-star distance on the adopted E8 steps-2 champion:
 | E4 width-1 native MTP | **COMPLETE — REJECTED, NEW WALL #24** | Baseline 26.57 +/- 0.33 tok/s, accept 2.142 +/- 0.026, T4 x2. Candidate loaded target + MTP and allocated a 1,160,700-token pool, then the fp4 Triton extend kernel failed to parse during width-2 graph capture. No candidate serving claim. |
 | E8 decode-latency sweep | **COMPLETE — ADOPT CDS=2** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract/all-task/T4 adoption passed. Protocol forced arms were null. KV splits 4 was -0.323/inconclusive; splits 16 -0.478 and rejected on acceptance. Retain protocol autotuning and splits 8. |
 | E5 persistent JIT caches | **COMPLETE — INCONCLUSIVE** | Clean restart: no-mount warm T4 395.7 +/- 3.3 s vs cache warm 372.0 +/- 9.1 s; only 23.7 s / 6% saved and still >240 s. Serving +0.137 tok/s, neutral. T4 x11. Keep cache mounts off. |
-| E6 mem-fraction under C8-C16 | **OPEN — NEXT** | `docs/EXPERIMENT-E6-MEMFRAC.md`; active-earlyoom preflight, scoped 12-GiB guard, T4, chat n=32 at C8/C16. |
-| E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
+| E6 mem-fraction under C8-C16 | **HOLD — EARLYOOM ABSENT ON BOTH NODES** | Mandatory read-only preflight failed before any arm. No host service was installed or changed. Resume only after separately authorized setup. |
+| E7 FA4 paged-KV port | **SCOPED — REVIEW NEXT** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
 | Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
 | Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
 | Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Exhaustion counter: **1 / 4**. E5's initial wall reset the sequence; its clean-root restart had no
-adoption, new wall, or profiling win and begins a new null sequence. E4 likewise does not count
-because it localized a new boot-dead wall.
+Exhaustion counter: **2 / 4**. E5's clean-root restart produced no adoption/new wall/profiling win;
+E6 then stopped at its already-declared prerequisite without a measurement. E4 likewise does not
+count because it localized a new boot-dead wall.
 
 ## Historical campaigns
 
