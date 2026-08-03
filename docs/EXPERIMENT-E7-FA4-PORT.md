@@ -376,6 +376,33 @@ container inspections, rank logs, and the machine decision are in
   mismatch, boot failure, T4 mismatch, or overlapping/worse throughput rejects the change.
 - **Cost bound:** one image/primitive build, one serving correctness launch, and one two-arm A/B.
 
+### Stage 5A.1 result — rejected, scalar reader retained
+
+Exact kernel commit `b58400609cd3d5e62ffb4b107be5e33629456e43` passed 14/14 primitive cases
+on both controls with byte-identical outputs and unchanged worst max absolute error
+`0.0019738078117370605`. Its independently baked images shared payload fingerprint
+`53ff159c7ca2ea9a9dbf434335a84d599ecfa8ca7f6a461d5e6308ed9d4f9ca9`. The block-5
+serving gate retained 1,327,616 full tokens, captured target and draft graphs, reached health, and
+passed T4 twice.
+
+The frozen same-session A/B at runner commit `1231e49652c3a1a8fc504f079231f43cc14315bb`
+then measured:
+
+| Reader | Open-ended tok/s | Accept length | Mean request latency |
+|---|---:|---:|---:|
+| scalar | 25.652 +/- 0.331 | 2.134 +/- 0.026 | 6.270 +/- 0.083 s |
+| scale-hoisted | 25.973 +/- 0.305 | 2.094 +/- 0.024 | 6.187 +/- 0.073 s |
+
+The `+0.321 tok/s` gain missed the 0.5 floor and the 1-SE bars overlapped. Acceptance fell by
+0.040 versus a 0.036 combined SE, tripping the frozen no-regression guard; latency improved only
+inside overlapping error bars. Both arms retained capacity and passed T4 before and after. The
+optimization is therefore rejected, not quoted as a speedup, and the source tree restores the
+byte-identical scalar reader from `dc43db1`/`9f62de4`.
+
+Raw correctness evidence is in `artifacts/e7-fa4-fp4-scale-hoist-correctness-b584006/`; raw A/B
+samples, histograms, contracts, inspections, logs, and the fail-closed decision are in
+`artifacts/e7-scale-hoist-ab-1231e49/`.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:

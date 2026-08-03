@@ -1,0 +1,19 @@
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/usr/local/lib/python3.12/dist-packages/torchao/quantization/quant_api.py:1731: SyntaxWarning: invalid escape sequence '\.'
+  """Configuration class for applying different quantization configs to modules or parameters based on their fully qualified names (FQNs).
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "full", "payload_bytes": 65536, "scale_bytes": 8192}
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "swa512", "payload_bytes": 65536, "scale_bytes": 8192}
+{"finite": true, "length": 127, "max_abs": 0.0012933611869812012, "mean_abs": 0.00021853233920410275, "mode": "full", "payload_bytes": 65536, "scale_bytes": 8192}
+{"finite": true, "length": 127, "max_abs": 0.0012933611869812012, "mean_abs": 0.00021853233920410275, "mode": "swa512", "payload_bytes": 65536, "scale_bytes": 8192}
+{"finite": true, "length": 128, "max_abs": 0.0012801885604858398, "mean_abs": 0.0002370878792135045, "mode": "full", "payload_bytes": 65536, "scale_bytes": 8192}
+{"finite": true, "length": 128, "max_abs": 0.0012801885604858398, "mean_abs": 0.0002370878792135045, "mode": "swa512", "payload_bytes": 65536, "scale_bytes": 8192}
+{"finite": true, "length": 129, "max_abs": 0.0019738078117370605, "mean_abs": 0.0002442220284137875, "mode": "full", "payload_bytes": 131072, "scale_bytes": 16384}
+{"finite": true, "length": 129, "max_abs": 0.0019738078117370605, "mean_abs": 0.0002442220284137875, "mode": "swa512", "payload_bytes": 131072, "scale_bytes": 16384}
+{"finite": true, "length": 511, "max_abs": 0.0007327049970626831, "mean_abs": 0.0001261281140614301, "mode": "full", "payload_bytes": 262144, "scale_bytes": 32768}
+{"finite": true, "length": 511, "max_abs": 0.0007327049970626831, "mean_abs": 0.0001261281140614301, "mode": "swa512", "payload_bytes": 262144, "scale_bytes": 32768}
+{"finite": true, "length": 512, "max_abs": 0.0006417036056518555, "mean_abs": 0.0001218915858771652, "mode": "full", "payload_bytes": 262144, "scale_bytes": 32768}
+{"finite": true, "length": 512, "max_abs": 0.0006417036056518555, "mean_abs": 0.0001218915858771652, "mode": "swa512", "payload_bytes": 262144, "scale_bytes": 32768}
+{"finite": true, "length": 513, "max_abs": 0.0006988942623138428, "mean_abs": 0.00012281762610655278, "mode": "full", "payload_bytes": 327680, "scale_bytes": 40960}
+{"finite": true, "length": 513, "max_abs": 0.0006328821182250977, "mean_abs": 0.0001233304792549461, "mode": "swa512", "payload_bytes": 327680, "scale_bytes": 40960}
+FA4 PAGED FP4 NUMERICS PASS cases=14
