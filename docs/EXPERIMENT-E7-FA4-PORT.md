@@ -1,9 +1,9 @@
 # E7 — SM120/121 FA4 paged-KV port
 
-Status: **SCOPED — ENGINEERING REQUIRED, NOT RUNNABLE**. No FA4 code has been added to the image,
-and no command has been run on `control1` or `control2`. This item must not be labeled
-Unlike E1–E6, there is not yet an implementation to measure; E7 remains engineering scope rather
-than a runnable experiment.
+Status: **IN PROGRESS — BF16 PAGED-KV GPU NUMERICS PASS, SERVING NOT YET GATED**. The pinned donor
+imports in the exact champion image on `control1`, and all 14 real-shape BF16 page-boundary cases
+pass the torch-reference tolerance. A reproducible probe and a separately tagged development-image
+baker are now present. No champion image tag, launcher default, or host configuration was changed.
 
 ## Pinned donor and provenance
 
@@ -19,6 +19,24 @@ than a runnable experiment.
 
 The donor is a vLLM Inkling-only adapter, not an SGLang backend. It clamps `num_splits=1`, carries
 vLLM's preallocated `out=` contract, and patches only compute-capability-major 12 dispatch.
+
+## Completed preflight
+
+- The champion image already contains the required CUDA bindings, CUTLASS DSL, Einops, Quack, and
+  TVM-FFI dependencies. Importing the unchanged donor inside that image passed on SM121 with CUDA
+  13.0; see `artifacts/e7-fa4-preflight-20260803/dependency-import.txt`.
+- `benchmarks/fa4_sm121_paged_probe.py` uses Inkling's real TP2 shape (`Hq=16`, `Hkv=4`, `D=128`)
+  with BF16 page size 128. Full attention and SWA-512 passed at lengths
+  1/127/128/129/511/512/513. All outputs were finite and the worst max absolute error was
+  0.001813 against the torch reference, below the predeclared 0.05 limit; see
+  `artifacts/e7-fa4-preflight-20260803/paged-bf16-numerics.jsonl`.
+- `scripts/verify-fa4-vendor.py` fail-closes on any file-set or byte drift. The baker refuses the
+  champion tag and creates `local/sglang-inkling:fa4-sm121-dev` instead.
+
+This proof is deliberately limited: the donor covers BF16 paged KV and retains the score-mod seam,
+but it does not carry SGLang's current MXFP8 helpers or Inkling relative-bias extensions. It is not
+a drop-in replacement for the FP4 champion. The next gate is a two-node BF16, page-128, spec-OFF T4
+run from the separate development image; DSpark and FP4 remain later gates.
 
 ## Why this is not a config experiment
 
@@ -64,5 +82,5 @@ The upstream constraint source is SGLang's
 - **Performance:** same-session chat-templated n=32 triton-vs-FA4 A/B, one coherent backend factor,
   accepted only at +0.5 tok/s or better with non-overlapping 1-SE bars and no quality regression.
 
-Until steps 1–5 exist and the GPU numerical gate passes, E7 is an engineering project—not a flag
-to add to `EXTRA_ARGS` and not a reason to touch the controls.
+Until the serving, quality, and performance gates pass, E7 remains a development lane—not a flag
+to add to the champion `EXTRA_ARGS` and not a reason to change either control's configuration.

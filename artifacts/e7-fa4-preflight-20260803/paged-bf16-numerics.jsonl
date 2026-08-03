@@ -1,0 +1,15 @@
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "full"}
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "swa512"}
+{"finite": true, "length": 127, "max_abs": 0.0018123388290405273, "mean_abs": 0.00023727469670120627, "mode": "full"}
+{"finite": true, "length": 127, "max_abs": 0.0018123388290405273, "mean_abs": 0.00023727469670120627, "mode": "swa512"}
+{"finite": true, "length": 128, "max_abs": 0.001589059829711914, "mean_abs": 0.0002304021909367293, "mode": "full"}
+{"finite": true, "length": 128, "max_abs": 0.001589059829711914, "mean_abs": 0.0002304021909367293, "mode": "swa512"}
+{"finite": true, "length": 129, "max_abs": 0.0015932321548461914, "mean_abs": 0.00022992979211267084, "mode": "full"}
+{"finite": true, "length": 129, "max_abs": 0.0015932321548461914, "mean_abs": 0.00022992979211267084, "mode": "swa512"}
+{"finite": true, "length": 511, "max_abs": 0.000692412257194519, "mean_abs": 0.00012476187839638442, "mode": "full"}
+{"finite": true, "length": 511, "max_abs": 0.000692412257194519, "mean_abs": 0.00012476187839638442, "mode": "swa512"}
+{"finite": true, "length": 512, "max_abs": 0.000667959451675415, "mean_abs": 0.00012215589231345803, "mode": "full"}
+{"finite": true, "length": 512, "max_abs": 0.000667959451675415, "mean_abs": 0.00012215589231345803, "mode": "swa512"}
+{"finite": true, "length": 513, "max_abs": 0.0007243454456329346, "mean_abs": 0.00012962741311639547, "mode": "full"}
+{"finite": true, "length": 513, "max_abs": 0.000731244683265686, "mean_abs": 0.00012769992463290691, "mode": "swa512"}
+{"result": "FA4 PAGED BF16 NUMERICS PASS", "cases": 14, "seed": 20260803, "dtype": "bfloat16", "page_size": 128, "shape": {"h_q": 16, "h_kv": 4, "head_dim": 128}}

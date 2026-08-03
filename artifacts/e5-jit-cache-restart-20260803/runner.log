@@ -1,0 +1,38 @@
+reproducibility PASS sha=7e44a67c06f535650a55902761d3709eb859ab78 repo_payload=3782ed02d8be385f424f13c5e10c495a73d50a8cc377f3ef665136fc769a30a6 image_payload=matched
+runtime champion/cache-mount contract PASS persist=0
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=1
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.14 +/- 0.55  accept 1.981 +/- 0.050
+open-ended/2 n=  8  tok/s 27.58 +/- 0.30  accept 2.232 +/- 0.024
+open-ended/3 n=  8  tok/s 24.80 +/- 0.75  accept 2.064 +/- 0.063
+open-ended/4 n=  8  tok/s 25.57 +/- 0.38  accept 2.085 +/- 0.032
+open-ended   n= 32  tok/s 25.52 +/- 0.34  accept 2.091 +/- 0.027
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=0
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.83 +/- 0.33  accept 2.031 +/- 0.028
+open-ended/2 n=  8  tok/s 27.97 +/- 0.57  accept 2.257 +/- 0.048
+open-ended/3 n=  8  tok/s 25.70 +/- 0.36  accept 2.126 +/- 0.031
+open-ended/4 n=  8  tok/s 25.71 +/- 0.41  accept 2.106 +/- 0.034
+open-ended   n= 32  tok/s 26.05 +/- 0.29  accept 2.130 +/- 0.023
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=1
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 25.07 +/- 0.30  accept 2.050 +/- 0.024
+open-ended/2 n=  8  tok/s 28.09 +/- 0.49  accept 2.251 +/- 0.043
+open-ended/3 n=  8  tok/s 25.07 +/- 0.54  accept 2.051 +/- 0.045
+open-ended/4 n=  8  tok/s 26.52 +/- 0.48  accept 2.153 +/- 0.042
+open-ended   n= 32  tok/s 26.19 +/- 0.31  accept 2.126 +/- 0.024
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=1
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=0
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=0
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=1
+T4 LOSSLESS PASS
+time_to_T4 cold=390.0s prime=389.0s baseline_warm=395.7+/-3.3s cache_warm=372.0+/-9.1s saved=23.7s warm_ratio=0.940
+throughput baseline=26.052+/-0.292 warm=26.189+/-0.314 delta=+0.137 combined_se=0.428
+INCONCLUSIVE: boot improves, but not enough to accept the cache change

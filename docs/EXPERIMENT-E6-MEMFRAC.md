@@ -1,8 +1,12 @@
 # E6 — memory fraction under C8/C16 load
 
-Status: **NOT RUN — optimization loop stopped after E3 success**. This remains a prepared
-follow-on experiment against the promoted block-5 champion.
+Status: **HOLD — mandatory read-only preflight failed on both Sparks on 2026-08-03**.
 Nothing in this branch installs, enables, or reconfigures `earlyoom` on either Spark.
+
+Both control1 and control2 returned `earlyoom is not installed; do not start E6`. Per the declared
+box-protection and kill criteria, no serving arm was launched and no memory-fraction inference is
+valid. The exact preflight outputs are committed in `artifacts/e6-preflight-20260803/`. E6 can
+resume only after separately authorized host setup; this experiment does not grant that authority.
 
 ## Hypothesis and gates
 

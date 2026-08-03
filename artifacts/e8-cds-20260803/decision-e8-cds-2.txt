@@ -1,0 +1,4 @@
+A=25.888+/-0.302 tok/s  B=26.533+/-0.299 tok/s  delta=+0.645  combined_se=0.425
+accept A=2.112+/-0.025 B=2.158+/-0.023 delta=+0.046 combined_se=0.034
+latency A=6.208+/-0.075s B=6.055+/-0.071s delta=-0.153s combined_se=0.103s
+ACCEPT: gain meets the threshold and 1-SE error bars do not overlap

@@ -5,13 +5,15 @@
 #
 # DEFAULTS = the measured champion (see README; numbers are mean +/- se over 32 samples,
 # NOT single runs): marlin MoE, triton attention + fp32 reduction, page-size 1, DSpark block 5,
-# decode CUDA graphs, mem-fraction 0.85, 64K ctx, conv-commit fix ON, draft-context cap ON.
+# 2 continuous decode steps, decode CUDA graphs, mem-fraction 0.85, 64K ctx, conv-commit fix ON,
+# draft-context cap ON.
 #
 # Measure ANY change with benchmarks/chat_bench.py — this stack is nondeterministic at temp 0
 # and single-run comparisons are worthless (docs/MEASUREMENT-PROTOCOL.md).
 #
 # Site knobs (env): MASTER_IP IF HCA GID MODELS IMAGE SGLANG_PORT
-# Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE EXTRA_ARGS
+# Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE
+# CONTINUOUS_DECODE_STEPS EXTRA_ARGS
 # Boot-cache knobs (env): PERSIST_JIT_CACHE JIT_CACHE_ROOT
 # Decode-latency knobs (env, E8 experiment only): NCCL_ALGO NCCL_PROTO — unset preserves NCCL's
 # autotuned defaults (the measured champion); set only inside a same-session A/B.
@@ -58,6 +60,10 @@ CTX=${CTX:-65536}          # bf16-KV default. With bf16 the pool shrinks sharply
 SPEC=${SPEC:-1}
 GRAPHS=${GRAPHS:-1}
 PAGE=${PAGE:-1}                         # page 128 corrupts the triton verify path
+CONTINUOUS_DECODE_STEPS=${CONTINUOUS_DECODE_STEPS:-2}  # E8 winner: +0.645 tok/s, latency -0.153 s
+case "$CONTINUOUS_DECODE_STEPS" in
+  *[!0-9]*|0|'') echo "ERROR: CONTINUOUS_DECODE_STEPS must be a positive integer" >&2; exit 2 ;;
+esac
 export INKLING_TORCH_CONV_COMMIT=${INKLING_TORCH_CONV_COMMIT:-1}   # conv-commit fix (see docs/BUGS-AND-FIXES.md)
 export INKLING_COMMIT_STEP_BIAS=${INKLING_COMMIT_STEP_BIAS:-1}
 
@@ -160,6 +166,7 @@ DOCKER_CMD=(
   --reasoning-parser inkling --tool-call-parser inkling
   --skip-server-warmup --disable-flashinfer-autotune
   --stream-interval 32
+  --num-continuous-decode-steps "$CONTINUOUS_DECODE_STEPS"
   "${EXTRA[@]}" ${USER_EXTRA[@]+"${USER_EXTRA[@]}"}
 )
 

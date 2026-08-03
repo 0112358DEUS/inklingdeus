@@ -86,7 +86,7 @@ are numerically clean. Then confirm the pool exceeds your context:
 
 ```
 grep -aoE 'context_len=[0-9]+|max_total_num_tokens=[0-9]+' ~/inkling-serve.log | tail -2
-→ context_len=1048576    max_total_num_tokens=1082627
+→ context_len=1048576    max_total_num_tokens=1331001
 ```
 
 ---
@@ -132,6 +132,7 @@ docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
     --reasoning-parser inkling --tool-call-parser inkling \
     --skip-server-warmup --disable-flashinfer-autotune \
     --stream-interval 32 \
+    --num-continuous-decode-steps 2 \
     --speculative-algorithm DSPARK \
     --speculative-draft-model-path /models/dspark-draft \
     --speculative-draft-model-quantization unquant \
@@ -153,6 +154,7 @@ docker run --name inkling-sglang --rm --gpus all --network host --ipc host \
 | `--disable-piecewise-cuda-graph` | the sm_121 piecewise compiler hard-fails |
 | `--cuda-graph-bs 1 2 … 16` | an explicit list; `--cuda-graph-max-bs` does **not** filter and the default list OOMs the pool |
 | `--speculative-dspark-block-size 5` | E3 winner: 26.007 ± 0.334 vs block 7 at 24.747 ± 0.208 tok/s (`n=32`, T4 before/after every arm) |
+| `--num-continuous-decode-steps 2` | E8 winner: +0.645 tok/s vs steps 1 (combined SE 0.425), accept +0.046, mean request latency -0.153 s; all adoption tasks and T4 passed |
 | `INKLING_TORCH_CONV_COMMIT=1` + `INKLING_COMMIT_STEP_BIAS=1` | the conv-state commit fix. Without them output degenerates into prompt-replay whenever accept > 1 |
 | `--device /dev/infiniband --cap-add IPC_LOCK` | without RDMA passthrough NCCL fails with a bare `invalid usage` |
 | `--mem-fraction-static 0.85` | 0.87 boots fine but buys nothing measurable |
@@ -176,30 +178,31 @@ the champion launcher defaults to the full 1M.
 |---|---|---|
 | launch | `./scripts/nvfp4-kv-boot.sh <rank>` | `CTX=65536 ./scripts/nvfp4-kv-boot.sh <rank>` |
 | context | **1,048,576** | 65,536 |
-| KV pool | **1,349,214 tokens in the accepted E3 run** | boot-dependent; must exceed declared context |
-| decode | **26.007 ± 0.334 tok/s open-ended** | remeasure after profile change |
-| accept (of 6) | **2.093 ± 0.026 open-ended** | remeasure after profile change |
+| KV pool | **1,331,001 tokens in the E8 adoption run** | boot-dependent; must exceed declared context |
+| decode | **26.225 ± 0.323 tok/s open-ended** | remeasure after profile change |
+| accept (of 6) | **2.138 ± 0.026 open-ended** | remeasure after profile change |
 
 ### Throughput depends heavily on workload — quote a task class, always
 
 Measured on this stack, stock draft, temp 0. Serving claims use the chat-templated
 [`benchmarks/chat_bench.py`](benchmarks/chat_bench.py); the legacy raw-continuation probe is
-retained separately for historical comparison. E3 remeasured open-ended serving on the current
-block-5 champion. The other task-class rows remain block-7 historical references and must not be
-pooled with the new arm:
+retained separately for historical comparison. E8's adoption gate measured every task class on the
+current block-5, continuous-decode-steps-2 champion in one session. `GSM8K-style` here is the
+serving-harness prompt class, not the separate full 1,319-item accuracy gate:
 
-| workload | accept (of 8) | tok/s |
+| workload | accept (of 6) | tok/s |
 |---|---|---|
-| GSM8K-style (block-7 historical) | **4.81 ± 0.14** | — |
-| code explanation (block-7 historical) | 2.46 ± 0.05 | 26.0 ± 0.6 |
-| chat (block-7 historical) | 2.20 ± 0.03 | 23.2 ± 0.3 |
-| **open-ended prose (block-5 champion, n=32)** | **2.093 ± 0.026** | **26.007 ± 0.334** |
-| pooled open-ended mix (block-7 historical, n=96) | 2.27 ± 0.03 | 23.9 ± 0.3 |
+| GSM8K-style (current champion, n=32) | **4.188 ± 0.053** | **48.738 ± 0.585** |
+| code explanation (current champion, n=32) | 2.834 ± 0.039 | 33.226 ± 0.478 |
+| chat (current champion, n=32) | 2.149 ± 0.033 | 26.330 ± 0.371 |
+| **open-ended prose (current champion, n=32)** | **2.138 ± 0.026** | **26.225 ± 0.323** |
+| pooled all-task evidence (current champion, n=128) | 2.827 ± 0.077 | 33.630 ± 0.844 |
 
-**Plan against ~26 tok/s for open-ended work on the block-5 champion.** The prior task-class spread is
+**Plan against ~26 tok/s for open-ended work on the current champion.** The task-class spread is
 not noise — it's the same gradient RadixArk's card shows across its nine datasets (GSM8K 4.79 →
-Arena-Hard 2.70): predictable, templated text drafts well; novel open-ended prose does not.
-Our GSM8K-style number reproduces theirs to within 0.02, which is what validates the harness.
+Arena-Hard 2.70): predictable, templated text drafts well; novel open-ended prose does not. The
+older block-7 GSM8K-style result (4.81) reproduced their card; the current block-5/CDS2 all-task
+gate is a different serving configuration and is reported independently above.
 
 > **Correction (2026-08-01):** earlier revisions of this README published **3.44 accept / 34.3 tok/s**
 > from a raw-continuation probe (untemplated text through `/generate`). That probe turns out to
@@ -226,7 +229,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 
 ## Why patches are needed
 
-`scripts/bake-image.sh` bakes them all. Full symptom → cause → fix table for **22 walls** lives in
+`scripts/bake-image.sh` bakes them all. Full symptom → cause → fix table for **25 walls** lives in
 [`docs/BUGS-AND-FIXES.md`](docs/BUGS-AND-FIXES.md). The load-bearing ones:
 
 | Area | Fix |
@@ -249,9 +252,11 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `scripts/run-e1-dual-roce-ab.sh` | same-session, one-variable single-vs-dual HCA experiment |
 | `scripts/run-e2-fp4-gemm-ab.sh` | same-session dense FP4 backend experiment with GPU numerical gate |
 | `scripts/run-e3-block-sweep.sh` | block 5/6/7 sweep with native accept-by-position evidence |
-| `scripts/run-e4-width1-mtp-ab.sh` | accepted DSpark block 5 vs native width-1 MTP with weight/runtime preflights |
-| `scripts/run-e5-jit-cache-ab.sh` | balanced cold/prime/warm boot experiment for opt-in compiler-cache mounts |
+| `scripts/run-e4-width1-mtp-ab.sh` | DSpark block 5 vs native width-1 MTP; E4 rejected at wall #24 |
+| `scripts/run-e5-jit-cache-ab.sh` | completed eight-boot cache experiment; 6% warm saving was inconclusive, mounts remain off |
 | `scripts/run-e6-memfrac-ab.sh` | MEMFRAC 0.85/0.68 C8/C16 experiment with host-memory evidence |
+| `scripts/run-e8-decode-latency-ab.sh` | completed one-factor E8 sweep; adopted CDS=2, retained NCCL autotuning and KV splits 8 |
+| `scripts/run-e8-cds2-adoption.sh` | exact-SHA champion runtime contract, T4, and all-task adoption gate |
 | `scripts/earlyoom-preflight.sh` | read-only check for active earlyoom and readable OOM journals |
 | `scripts/host-memory-guard.sh` | experiment-scoped 12-GiB guard that removes only the serving container |
 | `scripts/locked-experiment-launch.sh` | fixes every non-factor serving knob for reproducible A/B arms |
@@ -266,7 +271,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `patches/kv-quant/` | the KV-quantization implementation (6 files) |
 | `patches/files/` + `patches/all-patches.diff` | base GB10 patches, byte-exact and as a reviewable diff |
 | `docs/MEASUREMENT-PROTOCOL.md` | **read before benchmarking anything** |
-| `docs/BUGS-AND-FIXES.md` | 23 walls: symptom → root cause → fix |
+| `docs/BUGS-AND-FIXES.md` | 25 walls: symptom → root cause → fix |
 | `docs/KV-QUANT-IMPLEMENTATION-NOTES.md` | how the fp4 KV path works internally |
 | `docs/DRAFT-FINETUNE-PLAN.md` | the remaining accept lever (+ A4Q applicability appendix) |
 | `docs/EXPERIMENT-E7-FA4-PORT.md` | pinned SM120 donor and the pre-implementation SGLang port gates |
@@ -290,9 +295,10 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 All are env vars on the launchers: `CTX` · `MEMFRAC` (0.85 default; 0.87 works, buys nothing
 measurable) · `MAXREQ` · `BLOCK` (**5 is the accepted E3 champion**) · `KVD` (`fp4_mx_block16` default —
 **not** `nvfp4`, which selects the flashinfer/trtllm recipe the triton lane cannot consume; read by
-`nvfp4-kv-boot.sh`) · `GRAPH_BS` · `IMAGE` · `EXTRA_ARGS` · `LOG` (server log path, default
+`nvfp4-kv-boot.sh`) · `CONTINUOUS_DECODE_STEPS` (**2 is the accepted E8 champion**) · `GRAPH_BS` ·
+`IMAGE` · `EXTRA_ARGS` · `LOG` (server log path, default
 `~/inkling-serve.log` — the verify grep reads this) · `PERSIST_JIT_CACHE=1` plus an absolute
-`JIT_CACHE_ROOT` (E5 opt-in; default off pending hardware proof) · `INKLING_DRAFT_CTX_CAP` (default 65536; pins
+`JIT_CACHE_ROOT` (E5 opt-in; default off after an inconclusive 6% warm-boot saving) · `INKLING_DRAFT_CTX_CAP` (default 65536; pins
 the draft to its 64K adaptation so a huge declared context doesn't crater acceptance — baked patch #6).
 
 Ranked runners after E3 also accept `CHAMPION_BLOCK` (default `5`) and

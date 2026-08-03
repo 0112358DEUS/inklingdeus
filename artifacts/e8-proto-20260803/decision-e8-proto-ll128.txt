@@ -1,0 +1,3 @@
+A=26.189+/-0.321 tok/s  B=25.852+/-0.265 tok/s  delta=-0.337  combined_se=0.416
+accept A=2.132+/-0.025 B=2.136+/-0.021 delta=+0.004 combined_se=0.032
+INCONCLUSIVE: do not accept or quote a serving improvement

@@ -89,9 +89,20 @@ wait_stopped() {
 
 wait_ready() {
   local deadline=$((SECONDS + READY_TIMEOUT))
+  local seen_container=0
   while [ "$SECONDS" -lt "$deadline" ]; do
     if curl -fsS http://127.0.0.1:30000/health >/dev/null 2>&1; then
       return 0
+    fi
+    if docker inspect inkling-sglang >/dev/null 2>&1; then
+      seen_container=1
+      if [ "$(docker inspect -f '{{.State.Running}}' inkling-sglang 2>/dev/null)" != true ]; then
+        echo "server container exited before readiness" >&2
+        return 1
+      fi
+    elif [ "$seen_container" = 1 ]; then
+      echo "server container disappeared before readiness" >&2
+      return 1
     fi
     sleep 5
   done
@@ -129,14 +140,16 @@ verify_runtime_mounts() {
   docker inspect inkling-sglang >"$RESULT_DIR/$label-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/$label-worker-inspect.json"
-  python3 - "$persist" "$E5_CACHE_ROOT" "$RESULT_DIR/$label-head-inspect.json" \
-    "$RESULT_DIR/$label-worker-inspect.json" <<'PY'
+  python3 - "$persist" "$E5_CACHE_ROOT" "$PROFILE_BLOCK" "$PROFILE_SPEC" \
+    "$RESULT_DIR/$label-head-inspect.json" "$RESULT_DIR/$label-worker-inspect.json" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 persist = sys.argv[1] == "1"
 root = Path(sys.argv[2])
+profile_block = sys.argv[3]
+profile_spec = sys.argv[4] == "1"
 expected = {
     "/root/.triton": root / "triton",
     "/root/.cache/flashinfer": root / "flashinfer",
@@ -145,10 +158,33 @@ expected = {
     "/tmp/torchinductor_root": root / "torchinductor",
     "/root/.nv/ComputeCache": root / "cuda",
 }
-for path_text in sys.argv[3:]:
+expected_pairs = {
+    "--num-continuous-decode-steps": "2",
+    "--context-length": "1048576",
+    "--kv-cache-dtype": "fp4_mx_block16",
+    "--attention-backend": "triton",
+    "--moe-runner-backend": "marlin",
+    "--page-size": "1",
+}
+if profile_spec:
+    expected_pairs["--speculative-dspark-block-size"] = profile_block
+for path_text in sys.argv[5:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))
     mounts = {item["Destination"]: Path(item["Source"]) for item in payload[0]["Mounts"]}
+    command = payload[0]["Config"]["Cmd"]
+    env = payload[0]["Config"]["Env"]
+    for flag, wanted in expected_pairs.items():
+        if command.count(flag) != 1:
+            raise SystemExit(f"{path}: expected exactly one {flag}")
+        actual = command[command.index(flag) + 1]
+        if actual != wanted:
+            raise SystemExit(f"{path}: {flag}={actual!r}, expected {wanted!r}")
+    if "--triton-attention-num-kv-splits" in command:
+        raise SystemExit(f"{path}: unexpected KV-split override")
+    for prefix in ("NCCL_ALGO=", "NCCL_PROTO=", "SGLANG_RAGGED_VERIFY_MODE="):
+        if any(entry.startswith(prefix) for entry in env):
+            raise SystemExit(f"{path}: unexpected environment entry {prefix}")
     if persist:
         for destination, source in expected.items():
             if mounts.get(destination) != source:
@@ -159,7 +195,7 @@ for path_text in sys.argv[3:]:
         unexpected = set(expected).intersection(mounts)
         if unexpected:
             raise SystemExit(f"{path}: baseline unexpectedly persists {sorted(unexpected)}")
-print(f"runtime cache-mount contract PASS persist={int(persist)}")
+print(f"runtime champion/cache-mount contract PASS persist={int(persist)}")
 PY
 }
 
@@ -211,10 +247,14 @@ run_arm() {
 
 capture_cache_state() {
   local label=$1
-  find "$E5_CACHE_ROOT" -type f -printf '%P\t%s\n' | sort \
+  # Cache artifacts are written by the serving container as root. Traverse them from a separate
+  # root container with the host cache mounted read-only; never chmod/chown the factor under test.
+  docker run --rm \
+    --mount "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly" \
+    --entrypoint find "$IMAGE" /cache -type f -printf '%P\t%s\n' | sort \
     >"$RESULT_DIR/$label-head-cache-manifest.txt"
   ssh -o BatchMode=yes "$WORKER_SSH" \
-    "find $(printf '%q' "$E5_CACHE_ROOT") -type f -printf '%P\\t%s\\n' | sort" \
+    "docker run --rm --mount $(printf '%q' "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly") --entrypoint find $(printf '%q' "$IMAGE") /cache -type f -printf '%P\\t%s\\n' | sort" \
     >"$RESULT_DIR/$label-worker-cache-manifest.txt"
   [ -s "$RESULT_DIR/$label-head-cache-manifest.txt" ] || {
     echo "persistent cache remained empty on head" >&2
@@ -224,8 +264,11 @@ capture_cache_state() {
     echo "persistent cache remained empty on worker" >&2
     exit 2
   }
-  du -sk "$E5_CACHE_ROOT" >"$RESULT_DIR/$label-head-cache-size-kib.txt"
-  ssh -o BatchMode=yes "$WORKER_SSH" "du -sk $(printf '%q' "$E5_CACHE_ROOT")" \
+  docker run --rm \
+    --mount "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly" \
+    --entrypoint du "$IMAGE" -sk /cache >"$RESULT_DIR/$label-head-cache-size-kib.txt"
+  ssh -o BatchMode=yes "$WORKER_SSH" \
+    "docker run --rm --mount $(printf '%q' "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly") --entrypoint du $(printf '%q' "$IMAGE") -sk /cache" \
     >"$RESULT_DIR/$label-worker-cache-size-kib.txt"
 }
 

@@ -79,9 +79,20 @@ verify_mtp_weights() {
 
 wait_ready() {
   local deadline=$((SECONDS + READY_TIMEOUT))
+  local seen_container=0
   while [ "$SECONDS" -lt "$deadline" ]; do
     if curl -fsS http://127.0.0.1:30000/health >/dev/null 2>&1; then
       return 0
+    fi
+    if docker inspect inkling-sglang >/dev/null 2>&1; then
+      seen_container=1
+      if [ "$(docker inspect -f '{{.State.Running}}' inkling-sglang 2>/dev/null)" != true ]; then
+        echo "server container exited before readiness" >&2
+        return 1
+      fi
+    elif [ "$seen_container" = 1 ]; then
+      echo "server container disappeared before readiness" >&2
+      return 1
     fi
     sleep 5
   done

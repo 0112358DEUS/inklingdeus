@@ -1,29 +1,47 @@
 # Roadmap
 
-## Active optimization loop — control1/control2
+## Active north-star loop — control1/control2
 
-The live loop reached its success threshold on 2026-08-02 and stopped after E3, as required. E1
-retained the single-HCA transport, E2 was killed as not applicable at its numerical gate, and E3
-accepted DSpark block 5. Every measured serving arm used the same-session chat-templated
-open-ended `n=32` protocol and passed byte-exact T4 before and after measurement.
+The north-star loop resumed from current `main` on 2026-08-03. Completed rows are immutable:
+E1 retained the single-HCA transport, E2 was killed as not applicable, and E3 promoted DSpark
+block 5. E4 re-baselined that champion in the same session at **26.57 +/- 0.33 tok/s** and
+**2.142 +/- 0.026 accept**, with byte-exact T4 before and after, then rejected native width-1 MTP
+at its predeclared boot-dead gate. E8 retained NCCL autotuning after three forced-protocol arms
+produced no adoptable gain, then accepted continuous decode steps 2 at +0.645 tok/s with acceptance
+and latency improvements. The exact-default all-task adoption gate passed. E8 then retained 8 KV
+splits after both alternatives lost. E5's first session localized manifest wall #25; its clean-root
+restart cleared that wall but rejected cache adoption as too small. E6 is on HOLD because its
+mandatory read-only preflight found `earlyoom` absent on both nodes. E7 then passed the pinned-donor
+import and 14-case BF16 paged-KV numerical probe on real SM121 hardware; serving gates remain open.
+
+North-star distance on the adopted E8 steps-2 champion:
+
+- **N1:** 5.77 tok/s below 32 tok/s on the 26.225 +/- 0.323 all-task-gate open-ended n=32 result.
+- **N2:** 0.662 accept below 2.8 on the 2.138 +/- 0.026 open-ended result; no finetuned draft
+  exists yet. The pooled/task-class values are not substitutes for the N2 gate.
+- **N3:** BF16 paged-KV GPU numerics now pass on sm_121, but no T4-gated FA4 serving lane exists.
+- **N4:** NIAH@1M, full GSM8K, tool regression, four upstream submissions, and current-image
+  rebase are all still open.
 
 | Rank | Status | Artifact / next proof |
 |---|---|---|
 | E1 dual RoCE twins | **COMPLETE — INCONCLUSIVE** | Both twins 111.62 Gb/s; dual 24.636 +/- 0.291 vs single 24.928 +/- 0.295 tok/s. Retain single `rocep1s0f1`. |
 | E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
 | E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
-| E4 width-1 native MTP | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
-| E5 persistent JIT caches | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
-| E6 mem-fraction under C8–C16 | **NOT RUN — STOPPED AFTER SUCCESS** | Prepared against the promoted block-5 champion; outside this completed loop. |
-| E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
+| E4 width-1 native MTP | **COMPLETE — REJECTED, NEW WALL #24** | Baseline 26.57 +/- 0.33 tok/s, accept 2.142 +/- 0.026, T4 x2. Candidate loaded target + MTP and allocated a 1,160,700-token pool, then the fp4 Triton extend kernel failed to parse during width-2 graph capture. No candidate serving claim. |
+| E8 decode-latency sweep | **COMPLETE — ADOPT CDS=2** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract/all-task/T4 adoption passed. Protocol forced arms were null. KV splits 4 was -0.323/inconclusive; splits 16 -0.478 and rejected on acceptance. Retain protocol autotuning and splits 8. |
+| E5 persistent JIT caches | **COMPLETE — INCONCLUSIVE** | Clean restart: no-mount warm T4 395.7 +/- 3.3 s vs cache warm 372.0 +/- 9.1 s; only 23.7 s / 6% saved and still >240 s. Serving +0.137 tok/s, neutral. T4 x11. Keep cache mounts off. |
+| E6 mem-fraction under C8-C16 | **HOLD — EARLYOOM ABSENT ON BOTH NODES** | Mandatory read-only preflight failed before any arm. No host service was installed or changed. Resume only after separately authorized setup. |
+| E7 FA4 paged-KV port | **IN PROGRESS — BF16 GPU NUMERICS PASS** | Pinned 48-file donor/import pass; full + SWA page-boundary probe 14/14 finite, worst max abs 0.001813. Separate dev image only; spec-OFF serving T4 next. |
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
 | Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
 | Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
 | Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Consecutive no-win iterations before success: **2** (E1 inconclusive, E2 not applicable). E3 met
-the success threshold, so the loop stopped without running E4–E7.
+Exhaustion counter: **0 / 4**. E7's SM121 import and real-shape paged-KV numerical proof are a new
+profiling/engineering win and reset the counter. E4 likewise did not count because it localized a
+new boot-dead wall.
 
 ## Historical campaigns
 

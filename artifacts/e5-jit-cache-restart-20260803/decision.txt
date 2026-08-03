@@ -1,0 +1,3 @@
+time_to_T4 cold=390.0s prime=389.0s baseline_warm=395.7+/-3.3s cache_warm=372.0+/-9.1s saved=23.7s warm_ratio=0.940
+throughput baseline=26.052+/-0.292 warm=26.189+/-0.314 delta=+0.137 combined_se=0.428
+INCONCLUSIVE: boot improves, but not enough to accept the cache change
