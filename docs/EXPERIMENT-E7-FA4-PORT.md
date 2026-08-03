@@ -155,6 +155,79 @@ This clears E7's DSpark serving-correctness checkpoint. It is not N3 yet: the FA
 the locked depth/GSM8K/tool quality suite and a same-session, replicated triton-vs-FA4 performance
 gate. The champion remains triton/page-1/FP4 KV.
 
+## Stage 5 pre-registration — native page-128 FP4 KV
+
+### Hardware and format decision
+
+SM121 has two distinct Blackwell execution families that must not be conflated. It lacks the
+SM100 `tcgen05`/TMEM attention path, but PTX 8.8 exposes warp-level block-scaled
+`mma.sync.aligned` FP4 on the SM120 family. NVIDIA's current
+[PTX feature table](https://docs.nvidia.com/cuda/archive/12.9.2/parallel-thread-execution/index.html)
+lists the `.e2m1`, `.kind`, `.block_scale`, and `.scale_vec_size` warp-MMA features for
+`sm_120f`. The installed CUTLASS DSL 4.6.0 on both development images contains
+`warp.MmaMXF4Op` and `warp.MmaMXF4NVF4Op` for SM121a.
+
+That does **not** make the current cache bytes a legal native-MMA operand. The frozen
+`fp4_mx_block16` cache is packed E2M1 plus one UE8M0 scale per 16 elements. NVIDIA's
+[warp-MMA programming guide](https://docs.nvidia.com/cutlass/latest/media/docs/pythonDSL/mma_docs/wmma_programming.html#block-scaled-mma)
+defines:
+
+- `MmaMXF4Op`: E2M1, UE8M0, scale-vector 32;
+- `MmaMXF4NVF4Op`: E2M1, UE4M3, scale-vector 16.
+
+Therefore a direct MMA over the current block-16/UE8M0 storage would apply the wrong scale
+contract. Stage 5 preserves the proven cache format and separates capacity/correctness from a
+later cache-format experiment.
+
+### Stage 5A — fused exact block-16 reader
+
+- **Hypothesis:** FA4 can consume the existing packed block-16 cache by decoding only the K/V
+  tile selected by the page table into the existing BF16 shared-memory tiles. This removes stock
+  SGLang's whole-pool BF16 materialization while leaving the already proven BF16 MMA, score-mod,
+  softmax, and P×V numerics unchanged.
+- **One coherent factor:** the FA4 development lane moves from BF16 page-128 storage to the
+  existing `fp4_mx_block16` payload/scale contract plus its required fused paged reader. Model,
+  MoE/dense-FP4 backends, DSpark block, score-mod, graph tiers, context, network, and champion
+  defaults remain fixed. A new image tag must be used; `fa4-sm121-dev` and the champion tag are
+  immutable inputs.
+- **Implementation contract:** the SGLang pool returns raw packed K/V and separate scale buffers;
+  payload and scale rows move together for ordinary writes, prefix-valid commits, radix moves,
+  SWA translation, and DSpark injection. The FA4 interface accepts explicit `sfk`/`sfv` plus a
+  fail-closed FP4-format marker. On SM121 paged attention, each selected page row is decoded
+  on-the-fly into the kernel's K/V shared-memory tile. No per-layer or per-request full-pool BF16
+  tensor may be allocated.
+- **Expected effect:** storage cost falls from 2 bytes to 0.5625 bytes per KV element, a
+  theoretical 3.5556× pool-capacity multiplier. From the stage-4 359,936-token full pool this is
+  sufficient in principle for at least 1,279,772 tokens, above the 1,256,984-token moonshot gate.
+  This first rung is a correctness/capacity gate; it makes no throughput claim until the reader is
+  vectorized and profiled.
+- **Primitive gate:** on both controls, independently seeded tensors must prove packed payload and
+  scale identity against SGLang's reference quantizer, exact E2M1/UE8M0 element reconstruction,
+  finite outputs, deterministic repeatability, and page/SWA boundary attention at
+  1/127/128/129/511/512/513 tokens. Attention max absolute error must remain at most 0.05 versus a
+  torch dequantized reference.
+- **Writer gate:** ordinary target, target prefix-valid/radix move, SWA, and DSpark hidden-state
+  injection fixtures must each prove that payload and scale bytes reach identical destination
+  rows. Any payload-only move is a hard failure.
+- **Allocation gate:** source inspection plus CUDA memory snapshots must prove that one attention
+  call allocates no BF16 object proportional to total pool capacity. Only fixed-size per-CTA
+  shared-memory tiles and existing output/split buffers are allowed.
+- **Serving gate:** spec-off first, then unchanged DSpark block 5. Each must reach health and pass
+  two consecutive byte-exact T4 probes. Pool logs must report at least 1,256,984 usable full tokens
+  without OOM. A mismatch or whole-pool materialization rejects the stage immediately.
+- **Cost bound:** one isolated primitive/image build and at most two serving launches per rung.
+  Compile or numerical failure is documented before another implementation factor is introduced.
+
+### Stage 5B — hardware-native block-scaled QK
+
+Only after 5A passes may a separate image change the cache scale vector to block-32 UE8M0 and
+quantize Q to the same legal `MmaMXF4Op` contract for Q×K. P×V stays on the exact fused V-dequant
+path because the attention probabilities are not an E2M1 operand. This is a new numerical format,
+not an optimization flag: it requires fresh payload/scale tests, page-boundary attention, T4,
+NIAH, GSM8K, tool, and same-session performance gates. It is adopted only if it preserves every
+quality gate and improves the lower 1-SE throughput bound; otherwise 5A remains the native
+FP4-storage reference path.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
