@@ -228,6 +228,24 @@ NIAH, GSM8K, tool, and same-session performance gates. It is adopted only if it 
 quality gate and improves the lower 1-SE throughput bound; otherwise 5A remains the native
 FP4-storage reference path.
 
+### Stage 5A primitive result — pass on both controls
+
+The correctness-first fused reader compiled and ran at exact commit
+`c607b8465cb169ef55fa06ddd2b29980f4313e9d`. Independently baked images on the two controls had
+different Docker layer IDs, as expected, but the same FA4 payload fingerprint
+`9a7c390cf13732244c068e69241c0291021318c3a4d299523ed34e5a234048e4`.
+
+Both controls passed all 14 full/SWA cases at lengths 1/127/128/129/511/512/513. Their complete
+logs are byte-identical. The worst max absolute error against the torch reference over the
+reference-dequantized payload was `0.0019738078117370605`, versus the predeclared `0.05` limit;
+length 1 was exact. Each case also re-quantized K/V twice and required payload and scale bytes to
+match before the FA4 call. Raw logs and image identities are in
+`artifacts/e7-fa4-fp4-20260803/`.
+
+This clears only the isolated reader primitive. Live SGLang backend plumbing, the four-writer
+gate, allocation proof, usable-capacity log, serving health, and byte-exact T4 remain pending; no
+champion or control default changed.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
