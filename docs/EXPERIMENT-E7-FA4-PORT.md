@@ -1,9 +1,10 @@
 # E7 — SM120/121 FA4 paged-KV port
 
-Status: **IN PROGRESS — SPEC-OFF SCORE-MOD SERVING T4 PASS**. The pinned donor and dedicated
-relative-bias probes pass 14/14 on both controls. Selecting Inkling's guarded FA4 score-mod path
-clears wall #26: the full two-node server captures decode graphs and passes two byte-exact T4 probes.
-DSpark, quality, and performance gates remain. No champion image tag or default was changed.
+Status: **IN PROGRESS — DSPARK-ON-FA4 T4 PASS**. The pinned donor and dedicated relative-bias
+probes pass 14/14 on both controls. Inkling's guarded FA4 score-mod path clears wall #26, and the
+next one-factor stage loads DSpark block 5 with both target and draft on FA4, captures all target
+verify graph tiers, and passes T4 twice. Quality and performance gates remain. No champion image
+tag or default was changed.
 
 ## Pinned donor and provenance
 
@@ -132,6 +133,27 @@ pre-registered DSpark-on-FA4 T4 gate; the champion remains triton/page-1/FP4 KV.
   dtype, memory fraction, or bias path inside this run.
 - **No claim yet:** a pass advances E7 to quality/performance measurement; it does not establish N3
   or permit a champion/default change.
+
+## Stage 4 result — pass, DSpark target and draft on FA4
+
+The exact runner commit was `14b8c31457f7f43ca3b9d57c5e26c6779c579b99`. Both controls matched
+the repository, champion-image, and FA4-image payloads. Base paged-KV and score-mod relative-bias
+probes again passed 14/14 on each control before serving started.
+
+The target and DSpark draft loaded with BF16 page-128 KV. The head log proves gamma 5 initialization
+with `attention_backend=fa4`, followed by SGLang's explicit `Overriding draft attention backend to
+fa4`. The target full/SWA pools held 359,936/35,968 tokens and the draft allocated its separate
+359,936-token BF16 pool. All 12 target verify graph tiers captured with six tokens per request, and
+the DSpark greedy proposal folded into the draft CUDA graph.
+
+Docker inspection on both ranks proved FA4/page-128/BF16/DSpark-block-5/score-mod with continuous
+decode steps 2. Two consecutive T4 requests matched the frozen output byte-for-byte. The runner
+then stopped both containers; the worker's final connection-reset traceback is the expected tail
+after the intentional rank-0 shutdown, not a serving failure.
+
+This clears E7's DSpark serving-correctness checkpoint. It is not N3 yet: the FA4 lane still needs
+the locked depth/GSM8K/tool quality suite and a same-session, replicated triton-vs-FA4 performance
+gate. The champion remains triton/page-1/FP4 KV.
 
 ## Why this is not a config experiment
 

@@ -13,15 +13,16 @@ splits after both alternatives lost. E5's first session localized manifest wall 
 restart cleared that wall but rejected cache adoption as too small. E6 is on HOLD because its
 mandatory read-only preflight found `earlyoom` absent on both nodes. E7 passed the pinned-donor and
 relative-bias numerical probes on both SM121 controls, localized wall #26 at the SM100 sheared-bias
-seam, then cleared it with Inkling's guarded score-mod path and two exact spec-off T4 probes.
+seam, cleared it with Inkling's guarded score-mod path, then enabled DSpark block 5 as the sole
+factor. Both target and draft ran FA4, all verify graph tiers captured, and T4 passed twice.
 
 North-star distance on the adopted E8 steps-2 champion:
 
 - **N1:** 5.77 tok/s below 32 tok/s on the 26.225 +/- 0.323 all-task-gate open-ended n=32 result.
 - **N2:** 0.662 accept below 2.8 on the 2.138 +/- 0.026 open-ended result; no finetuned draft
   exists yet. The pooled/task-class values are not substitutes for the N2 gate.
-- **N3:** the FA4 BF16/page-128 spec-off lane now passes full decode graphs and T4 on sm_121;
-  DSpark-on-FA4 plus depth/tool quality gates are still open.
+- **N3:** FA4 BF16/page-128 with DSpark block 5 now passes full target/draft graph setup and T4 on
+  sm_121; depth/GSM8K/tool quality and same-session performance gates are still open.
 - **N4:** NIAH@1M, full GSM8K, tool regression, four upstream submissions, and current-image
   rebase are all still open.
 
@@ -34,16 +35,15 @@ North-star distance on the adopted E8 steps-2 champion:
 | E8 decode-latency sweep | **COMPLETE — ADOPT CDS=2** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract/all-task/T4 adoption passed. Protocol forced arms were null. KV splits 4 was -0.323/inconclusive; splits 16 -0.478 and rejected on acceptance. Retain protocol autotuning and splits 8. |
 | E5 persistent JIT caches | **COMPLETE — INCONCLUSIVE** | Clean restart: no-mount warm T4 395.7 +/- 3.3 s vs cache warm 372.0 +/- 9.1 s; only 23.7 s / 6% saved and still >240 s. Serving +0.137 tok/s, neutral. T4 x11. Keep cache mounts off. |
 | E6 mem-fraction under C8-C16 | **HOLD — EARLYOOM ABSENT ON BOTH NODES** | Mandatory read-only preflight failed before any arm. No host service was installed or changed. Resume only after separately authorized setup. |
-| E7 FA4 paged-KV port | **IN PROGRESS — SPEC-OFF T4 PASS** | Both controls: base + relative-bias probes 14/14; score-mod bias clears wall #26; all 12 decode graphs capture; runtime contract and T4 x2 pass. Separate BF16 dev lane only. DSpark-on-FA4 T4 next. |
+| E7 FA4 paged-KV port | **IN PROGRESS — DSPARK T4 PASS** | Both controls: base + relative-bias probes 14/14. Target and DSpark draft use FA4; block 5/gamma 5, all 12 target verify graph tiers, draft graph fold, runtime contract, and T4 x2 pass. Separate BF16 dev lane only; quality/performance next. |
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
 | Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
 | Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
 | Q4 concurrency curves | **READY — NOT RUN** | Authoritative chat-templated n=32 at C1/2/4/8/16. The pinned Mia-shaped 512-token diagnostic adds C1/2/3/4/6/8 at n=48 per level, replicated and T4-bracketed; targets C1 >=33.9 and C8 aggregate >=74.9 without changing N1. See `docs/MIAAI-BENCHMARK-CROSSWALK.md`. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Exhaustion counter: **0 / 4**. E7's two-control score-mod numerical and spec-off T4 serving proof is
-a new engineering win and resets the counter. E4 likewise did not count because it localized a new
-boot-dead wall.
+Exhaustion counter: **0 / 4**. E7's DSpark-on-FA4 graph and T4 proof is a new engineering win and
+resets the counter. E4 likewise did not count because it localized a new boot-dead wall.
 
 ## Historical campaigns
 
