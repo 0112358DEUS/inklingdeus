@@ -1,0 +1,9 @@
+REJECT — NEW WALL #26
+repo_sha=164d84bb7116ac26f726d0815b13c3fd029aadf4
+stage=E7 BF16 page-128 FA4 spec-off serving
+preflight=PASS repo/image parity and 14/14 GPU numerics on both controls
+boot=FAIL after weights and BF16 KV pools loaded, during target decode CUDA-graph capture
+failure=TypeError: flash_attn_varlen_func() got an unexpected keyword argument 'rel_bias'
+root_cause=SGLang's FA4 wrapper passes its Inkling relative-bias extension to the pinned donor interface, which does not implement that keyword
+t4=NOT RUN; no serving or throughput claim
+action=record wall, stop both containers, and implement the relative-bias adapter only in a separately pre-registered iteration

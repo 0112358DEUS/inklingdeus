@@ -11,15 +11,17 @@ produced no adoptable gain, then accepted continuous decode steps 2 at +0.645 to
 and latency improvements. The exact-default all-task adoption gate passed. E8 then retained 8 KV
 splits after both alternatives lost. E5's first session localized manifest wall #25; its clean-root
 restart cleared that wall but rejected cache adoption as too small. E6 is on HOLD because its
-mandatory read-only preflight found `earlyoom` absent on both nodes. E7 then passed the pinned-donor
-import and 14-case BF16 paged-KV numerical probe on real SM121 hardware; serving gates remain open.
+mandatory read-only preflight found `earlyoom` absent on both nodes. E7 passed the pinned-donor
+import and 14-case BF16 paged-KV numerical probe on both SM121 controls, then localized new wall #26
+at the full SGLang relative-bias wrapper seam during spec-off decode-graph capture.
 
 North-star distance on the adopted E8 steps-2 champion:
 
 - **N1:** 5.77 tok/s below 32 tok/s on the 26.225 +/- 0.323 all-task-gate open-ended n=32 result.
 - **N2:** 0.662 accept below 2.8 on the 2.138 +/- 0.026 open-ended result; no finetuned draft
   exists yet. The pooled/task-class values are not substitutes for the N2 gate.
-- **N3:** BF16 paged-KV GPU numerics now pass on sm_121, but no T4-gated FA4 serving lane exists.
+- **N3:** BF16 paged-KV GPU numerics pass on sm_121, but wall #26 blocks the first T4-gated FA4
+  serving lane at SGLang's unsupported `rel_bias` call.
 - **N4:** NIAH@1M, full GSM8K, tool regression, four upstream submissions, and current-image
   rebase are all still open.
 
@@ -32,16 +34,15 @@ North-star distance on the adopted E8 steps-2 champion:
 | E8 decode-latency sweep | **COMPLETE — ADOPT CDS=2** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract/all-task/T4 adoption passed. Protocol forced arms were null. KV splits 4 was -0.323/inconclusive; splits 16 -0.478 and rejected on acceptance. Retain protocol autotuning and splits 8. |
 | E5 persistent JIT caches | **COMPLETE — INCONCLUSIVE** | Clean restart: no-mount warm T4 395.7 +/- 3.3 s vs cache warm 372.0 +/- 9.1 s; only 23.7 s / 6% saved and still >240 s. Serving +0.137 tok/s, neutral. T4 x11. Keep cache mounts off. |
 | E6 mem-fraction under C8-C16 | **HOLD — EARLYOOM ABSENT ON BOTH NODES** | Mandatory read-only preflight failed before any arm. No host service was installed or changed. Resume only after separately authorized setup. |
-| E7 FA4 paged-KV port | **IN PROGRESS — BF16 GPU NUMERICS PASS** | Pinned 48-file donor/import pass; full + SWA page-boundary probe 14/14 finite, worst max abs 0.001813. Separate dev image only; spec-OFF serving T4 next. |
+| E7 FA4 paged-KV port | **IN PROGRESS — NEW WALL #26** | Both controls: pinned import and full/SWA probe 14/14 pass. Spec-off server loads weights and BF16 pools, then dies in decode-graph capture because donor varlen lacks SGLang's `rel_bias` keyword. No T4. Guarded relative-bias adapter + numerical gate next; one dead E7 stage. |
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
 | Q2 depth quality | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; token-measured NIAH 512K/1M at 3 depths plus full 1,319-item GSM8K ≥94.83% |
 | Q3 tool-call regression | **READY — NOT RUN** | `docs/QUALITY-GATES-Q2-Q3.md`; 4 tools ×4 reps ×2 turns, structured args and zero parser-token leaks |
 | Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Exhaustion counter: **0 / 4**. E7's SM121 import and real-shape paged-KV numerical proof are a new
-profiling/engineering win and reset the counter. E4 likewise did not count because it localized a
-new boot-dead wall.
+Exhaustion counter: **0 / 4**. E7 localized new wall #26 after its two-control numerical proof, so
+the counter remains reset. E4 likewise did not count because it localized a new boot-dead wall.
 
 ## Historical campaigns
 
