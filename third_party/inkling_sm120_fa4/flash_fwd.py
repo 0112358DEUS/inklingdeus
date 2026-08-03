@@ -864,11 +864,14 @@ class FlashAttentionForwardBase:
                 page_offset = safe_row_idx % page_size
                 valid = block >= 0 and row_idx < seqlen
                 page = paged_kv_manager.mPageTable[page_idx] if valid else Int32(0)
-                packed = mX[page_offset, byte_col, page] if valid else cutlass.Uint8(0)
-                sf = mSF[page_offset, byte_col // 8, page] if valid else cutlass.Uint8(127)
+                # TVM-FFI exposes torch.uint8 storage as Int8 in this CUTLASS
+                # build. Keep both control-flow arms Int8, then mask after the
+                # widening conversion to recover the original byte.
+                packed = mX[page_offset, byte_col, page] if valid else cutlass.Int8(0)
+                sf = mSF[page_offset, byte_col // 8, page] if valid else cutlass.Int8(127)
 
-                packed_i = Int32(packed)
-                scale = cute.math.exp2(Float32(Int32(sf)) - 127.0)
+                packed_i = Int32(packed) & 0xFF
+                scale = cute.math.exp2(Float32(Int32(sf) & 0xFF) - 127.0)
                 code0 = packed_i & 0xF
                 code1 = (packed_i >> 4) & 0xF
 
