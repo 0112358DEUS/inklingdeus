@@ -77,6 +77,25 @@ standalone numerical win, not two consecutive dead stages. The next E7 iteration
 numerically gate a guarded relative-bias adapter before another serve; disabling graphs or dropping
 the bias would be a different factor and is not a retry of this result.
 
+## Stage 3 pre-registration — guarded score-mod relative bias
+
+- **Hypothesis:** Inkling's existing FA4-only score-mod path is the SM121 adapter for wall #26. It
+  adds the same relative logits through the donor's supported `score_mod` and `aux_tensors`
+  interface, while bypassing only the dedicated SM100 shearing optimization.
+- **Expected effect:** correctness only; no throughput claim. A real-shape relative-bias probe must
+  pass 14/14 full/SWA page-boundary cases on both controls before the server is started. The
+  unchanged development image should then reach health and pass two byte-exact T4 probes.
+- **One variable:** set `SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0` inside the separate E7 launch.
+  Image payload, donor, FA4/page-128/BF16, graphs, spec-off, context, network, MoE, and dense-FP4
+  settings stay identical to stage 2. The champion launch leaves this environment variable unset.
+- **Reference gate:** `benchmarks/fa4_sm121_rel_bias_probe.py` uses the real per-rank
+  `Hq=16, Hkv=4, D=128` shape, relative extent 1024, page/SWA boundaries, and the exact Inkling
+  score-mod callable. Require finite output and max absolute error at most 0.05 versus torch.
+- **Kill criterion:** any reference failure, payload/contract drift, boot death, or one-byte T4
+  mismatch rejects this stage. Because that would be the second dead E7 serving stage in a row,
+  E7 must then be parked under the goal's two-dead-stage rule.
+- **Cost:** about one minute for four GPU probes plus one 6–10 minute two-node boot.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:

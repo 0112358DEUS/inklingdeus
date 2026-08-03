@@ -13,7 +13,7 @@
 #
 # Site knobs (env): MASTER_IP IF HCA GID MODELS IMAGE SGLANG_PORT
 # Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE
-# CONTINUOUS_DECODE_STEPS EXTRA_ARGS
+# CONTINUOUS_DECODE_STEPS EXTRA_ARGS INKLING_SHEARED_BIAS
 # Boot-cache knobs (env): PERSIST_JIT_CACHE JIT_CACHE_ROOT
 # Decode-latency knobs (env, E8 experiment only): NCCL_ALGO NCCL_PROTO — unset preserves NCCL's
 # autotuned defaults (the measured champion); set only inside a same-session A/B.
@@ -74,6 +74,20 @@ RAGGED_ENV=()
 if [ -n "${RAGGED:-}" ]; then
   RAGGED_ENV+=(-e SGLANG_RAGGED_VERIFY_MODE="$RAGGED")
 fi
+
+# E7 opt-in: choose Inkling's FA4 relative-bias implementation. Unset preserves the image default
+# and therefore the champion contract. Zero selects the model-guarded score_mod + aux-tensor path;
+# one selects the dedicated SM100 sheared-bias path.
+INKLING_BIAS_ENV=()
+case "${INKLING_SHEARED_BIAS:-}" in
+  '') ;;
+  0|1)
+    INKLING_BIAS_ENV+=(
+      -e SGLANG_OPT_USE_INKLING_SHEARED_BIAS="$INKLING_SHEARED_BIAS"
+    )
+    ;;
+  *) echo "ERROR: INKLING_SHEARED_BIAS must be unset, 0, or 1" >&2; exit 2 ;;
+esac
 
 # E8 opt-in: NCCL collective tuning for the per-decode-step TP2 all-reduce. Injected only when
 # set, so the default launch keeps NCCL's own protocol/algorithm selection (the measured champion).
@@ -137,6 +151,7 @@ DOCKER_CMD=(
   ${CACHE_MOUNTS[@]+"${CACHE_MOUNTS[@]}"}
   -e SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
   ${RAGGED_ENV[@]+"${RAGGED_ENV[@]}"}
+  ${INKLING_BIAS_ENV[@]+"${INKLING_BIAS_ENV[@]}"}
   -e NCCL_IB_HCA="$HCA" -e NCCL_IB_GID_INDEX="$GID"
   -e NCCL_SOCKET_IFNAME="$IF" -e GLOO_SOCKET_IFNAME="$IF" -e TP_SOCKET_IFNAME="$IF"
   -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none
