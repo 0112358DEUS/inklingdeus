@@ -113,6 +113,26 @@ dropping relative bias or changing the donor: the existing Inkling score-mod cal
 same relative logits through the donor's supported auxiliary-tensor interface. Next is a separately
 pre-registered DSpark-on-FA4 T4 gate; the champion remains triton/page-1/FP4 KV.
 
+## Stage 4 pre-registration — DSpark on FA4
+
+- **Hypothesis:** the already adopted DSpark block-5 draft path can write/inject BF16 page-128 KV
+  while the target uses FA4 score-mod attention, without changing T4 output.
+- **Single factor:** enable DSpark block 5. The successful stage-3 image, FA4 target, BF16 KV,
+  page 128, score-mod relative bias, marlin MoE, `flashinfer_trtllm` FP4 GEMM, graph tiers,
+  max requests, continuous decode steps 2, transport, model paths, and site knobs stay fixed.
+- **Preflight:** both controls must again match repo, FA4-image, and champion-image payloads; base
+  paged-KV and score-mod relative-bias probes must each pass 14/14 on both controls.
+- **Runtime proof:** Docker inspection must show the locked common contract plus exactly one DSpark
+  block-5 flag set on both ranks. The head log must prove gamma 5 initialized and its greedy
+  proposal folded into the draft CUDA graph.
+- **Pass gate:** the full two-node server reaches health, the runtime proof passes, and two
+  consecutive byte-exact T4 requests match the frozen expected output.
+- **Kill criterion:** any payload/probe drift, boot death, missing DSpark graph proof, or one-byte
+  T4 mismatch rejects the stage. Do not change the draft backend, block, graphs, page size, KV
+  dtype, memory fraction, or bias path inside this run.
+- **No claim yet:** a pass advances E7 to quality/performance measurement; it does not establish N3
+  or permit a champion/default change.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:

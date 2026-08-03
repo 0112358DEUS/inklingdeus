@@ -1,5 +1,5 @@
 #!/bin/bash
-# E7 stage 2: two-node SM121 FA4 serving correctness with BF16 KV and speculation disabled.
+# E7 serving-correctness stages: SM121 FA4 with BF16 KV, score-mod bias, then optional DSpark.
 set -euo pipefail
 
 WORKER_SSH=${WORKER_SSH:?set passwordless worker SSH}
@@ -14,14 +14,31 @@ CHAMPION_IMAGE=${CHAMPION_IMAGE:-local/sglang-inkling:gb10-kvquant}
 RESULT_DIR=${RESULT_DIR:-artifacts/e7-fa4-specoff}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
 REL_BIAS_MODE=${REL_BIAS_MODE:-sheared}
+SPEC_MODE=${SPEC_MODE:-off}
+BLOCK=${BLOCK:-5}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
-LABEL=e7-fa4-bf16-specoff
 
 case "$REL_BIAS_MODE" in
   sheared) INKLING_SHEARED_BIAS= ;;
   scoremod) INKLING_SHEARED_BIAS=0 ;;
   *) echo "REL_BIAS_MODE must be sheared or scoremod" >&2; exit 2 ;;
 esac
+
+case "$SPEC_MODE" in
+  off)
+    SPEC=0
+    SPEC_LABEL=specoff
+    ;;
+  dspark)
+    case "$BLOCK" in
+      *[!0-9]*|0|'') echo "BLOCK must be a positive integer" >&2; exit 2 ;;
+    esac
+    SPEC=1
+    SPEC_LABEL="dspark-b$BLOCK"
+    ;;
+  *) echo "SPEC_MODE must be off or dspark" >&2; exit 2 ;;
+esac
+LABEL="e7-fa4-bf16-$SPEC_LABEL"
 
 mkdir -p "$RESULT_DIR"
 
@@ -81,7 +98,10 @@ verify_reproducibility() {
   {
     printf 'repo_sha=%s\nrepo_payload=%s\n' "$local_sha" "$local_payload"
     printf 'fa4_payload=%s\nchampion_payload=%s\n' "$local_fa4" "$champion_payload"
-    printf 'rel_bias_mode=%s\n' "$REL_BIAS_MODE"
+    printf 'rel_bias_mode=%s\nspec_mode=%s\n' "$REL_BIAS_MODE" "$SPEC_MODE"
+    if [ "$SPEC_MODE" = dspark ]; then
+      printf 'dspark_block=%s\n' "$BLOCK"
+    fi
     printf 'head_champion_id='
     docker image inspect "$CHAMPION_IMAGE" --format '{{.Id}}'
     printf 'worker_champion_id='
@@ -146,7 +166,7 @@ wait_ready() {
 
 record_boot_failure() {
   {
-    echo "FAIL: FA4 BF16 spec-off server did not become healthy; no serving claim"
+    echo "FAIL: FA4 BF16 $SPEC_LABEL server did not become healthy; no serving claim"
     echo "head log tail:"
     tail -n 160 "$RESULT_DIR/$LABEL-head.log" 2>/dev/null || true
     echo "worker log tail:"
@@ -160,7 +180,8 @@ capture_runtime_contract() {
   docker inspect inkling-sglang >"$RESULT_DIR/$LABEL-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/$LABEL-worker-inspect.json"
-  python3 - "$IMAGE" "$REL_BIAS_MODE" "$RESULT_DIR/$LABEL-head-inspect.json" \
+  python3 - "$IMAGE" "$REL_BIAS_MODE" "$SPEC_MODE" "$BLOCK" \
+    "$RESULT_DIR/$LABEL-head-inspect.json" \
     "$RESULT_DIR/$LABEL-worker-inspect.json" <<'PY'
 import json
 import sys
@@ -168,6 +189,8 @@ from pathlib import Path
 
 expected_image = sys.argv[1]
 rel_bias_mode = sys.argv[2]
+spec_mode = sys.argv[3]
+block = sys.argv[4]
 required_pairs = {
     "--attention-backend": "fa4",
     "--page-size": "128",
@@ -182,7 +205,7 @@ required_flags = {
     "--disable-piecewise-cuda-graph",
     "--disable-prefill-cuda-graph",
 }
-for path_text in sys.argv[3:]:
+for path_text in sys.argv[5:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     command = payload["Config"]["Cmd"]
@@ -199,16 +222,27 @@ for path_text in sys.argv[3:]:
     missing = required_flags.difference(command)
     if missing:
         raise SystemExit(f"{path}: missing {sorted(missing)}")
-    forbidden = {
-        "--kv-cache-dtype",
-        "--speculative-algorithm",
-        "--speculative-draft-model-path",
-        "--speculative-draft-model-quantization",
-        "--speculative-dspark-block-size",
+    if "--kv-cache-dtype" in command:
+        raise SystemExit(f"{path}: BF16 gate must not set --kv-cache-dtype")
+    spec_pairs = {
+        "--speculative-algorithm": "DSPARK",
+        "--speculative-draft-model-path": "/models/dspark-draft",
+        "--speculative-draft-model-quantization": "unquant",
+        "--speculative-dspark-block-size": block,
     }
-    present = forbidden.intersection(command)
-    if present:
-        raise SystemExit(f"{path}: forbidden spec-off flags: {sorted(present)}")
+    if spec_mode == "dspark":
+        for flag, expected in spec_pairs.items():
+            if command.count(flag) != 1:
+                raise SystemExit(f"{path}: expected exactly one {flag}")
+            actual = command[command.index(flag) + 1]
+            if actual != expected:
+                raise SystemExit(f"{path}: {flag}={actual!r}, expected={expected!r}")
+    elif spec_mode == "off":
+        present = set(spec_pairs).intersection(command)
+        if present:
+            raise SystemExit(f"{path}: forbidden spec-off flags: {sorted(present)}")
+    else:
+        raise SystemExit(f"unsupported spec mode: {spec_mode!r}")
     env = set(payload["Config"]["Env"])
     bias_env = {
         value for value in env if value.startswith("SGLANG_OPT_USE_INKLING_SHEARED_BIAS=")
@@ -224,9 +258,19 @@ for path_text in sys.argv[3:]:
         )
 print(
     "E7 runtime contract PASS attention=fa4 page=128 kv=bf16 "
-    f"spec=off rel_bias={rel_bias_mode}"
+    f"spec={spec_mode} block={block if spec_mode == 'dspark' else 'none'} "
+    f"rel_bias={rel_bias_mode}"
 )
 PY
+}
+
+verify_speculator_log() {
+  [ "$SPEC_MODE" = dspark ] || return 0
+  grep -q "Initialized DSpark draft runner.*gamma=$BLOCK," \
+    "$RESULT_DIR/$LABEL-head.log"
+  grep -q 'DSpark draft greedy proposal folded into the draft cuda graph' \
+    "$RESULT_DIR/$LABEL-head.log"
+  printf 'DSpark runtime log PASS block=%s draft-runner=initialized graph=folded\n' "$BLOCK"
 }
 
 lossless_gate() {
@@ -270,12 +314,13 @@ start_server() {
   stop_arm
   wait_stopped
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$LABEL-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=0 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=$(printf '%q' "$INKLING_SHEARED_BIAS") MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$LABEL-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=$(printf '%q' "$SPEC") BLOCK=$(printf '%q' "$BLOCK") GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=$(printf '%q' "$INKLING_SHEARED_BIAS") MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/$LABEL-head.log" \
     ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 \
-    SPEC=0 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
+    SPEC="$SPEC" BLOCK="$BLOCK" GRAPHS=1 \
+    GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
     INKLING_SHEARED_BIAS="$INKLING_SHEARED_BIAS" MAXREQ=16 PAGE=128 \
     CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= \
     "$REPO_DIR/scripts/inkling-sglang-launch.sh" 0 </dev/null >/dev/null 2>&1 &
@@ -289,7 +334,10 @@ if ! wait_ready; then
   exit 4
 fi
 capture_runtime_contract | tee "$RESULT_DIR/runtime-contract.txt"
+if [ "$SPEC_MODE" = dspark ]; then
+  verify_speculator_log | tee "$RESULT_DIR/speculator-contract.txt"
+fi
 lossless_gate "$RESULT_DIR/lossless-1.json" | tee "$RESULT_DIR/lossless-1.txt"
 lossless_gate "$RESULT_DIR/lossless-2.json" | tee "$RESULT_DIR/lossless-2.txt"
-echo "PASS: FA4 BF16 page-128 spec-off serving reached health and two exact T4 gates (rel_bias=$REL_BIAS_MODE)" \
+echo "PASS: FA4 BF16 page-128 $SPEC_LABEL serving reached health and two exact T4 gates (rel_bias=$REL_BIAS_MODE)" \
   | tee "$RESULT_DIR/decision.txt"
