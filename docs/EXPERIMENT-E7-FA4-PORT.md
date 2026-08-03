@@ -552,3 +552,16 @@ fingerprint included each worktree's site-specific `.git` pointer file. Both wor
 and their 152 runnable entries matched; only the embedded absolute metadata path differed. The
 fingerprinter now excludes `.git` in both directory and file form, with a checkout-versus-worktree
 regression test. This is an evidence-harness correction only; no serving process started.
+
+At the next exact run, repository/image identity, 1,315,584-token capacity, all graph tiers, the
+new tokenize contract, and T4 passed. The first 512K/10%-depth NIAH request measured 511,984
+tokens and returned the exact secret after 1,886.8 seconds. That result exposed a second harness
+weakness: NIAH retained all six results only in memory until the suite ended, so a later failure or
+transport interruption could erase hours of evidence. The run was deliberately terminated during
+case two and both containers were stopped. Because case one was not durably checkpointed, it is
+reported as diagnostic evidence only and must be rerun.
+
+The next exact retry adds atomic per-case checkpointing and explicit resume. Resume is accepted
+only when schema, model, full plan, and completed case-order prefix match exactly. Prompts, token
+calibration, depths, context targets, generation settings, correctness rule, model image, and all
+serving flags are unchanged.

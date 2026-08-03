@@ -270,7 +270,7 @@ lossless_gate "$RESULT_DIR/lossless-before-quality.json" \
 
 INKLING_URL=http://127.0.0.1:30000 \
   python3 "$REPO_DIR/benchmarks/niah_eval.py" \
-  --output "$RESULT_DIR/niah.json"
+  --output "$RESULT_DIR/niah.json" --resume
 lossless_gate "$RESULT_DIR/lossless-after-niah.json" \
   | tee "$RESULT_DIR/lossless-after-niah.txt"
 

@@ -1,0 +1,1 @@
+{"completed_quality_cases_durably_recorded":0,"diagnostic_live_stream":{"depth":0.1,"elapsed_seconds":1886.8,"measured_prompt_tokens":511984,"passed":true,"target_tokens":512000},"failure_class":"evidence_durability_gap","final_quality_verdict":null,"intentional_stop":true,"pre_quality_t4_passed":true,"runtime_capacity_passed":true,"schema_version":1}

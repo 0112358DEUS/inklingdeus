@@ -135,7 +135,7 @@ lossless_gate | tee "$HEAD_RESULT_DIR/lossless-before-quality.txt"
 niah_rc=0
 if INKLING_URL=http://127.0.0.1:30000 \
   python3 "$REPO_DIR/benchmarks/niah_eval.py" \
-  --output "$HEAD_RESULT_DIR/niah.json"; then
+  --output "$HEAD_RESULT_DIR/niah.json" --resume; then
   :
 else
   niah_rc=$?

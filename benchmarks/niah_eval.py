@@ -257,6 +257,11 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--timeout", type=float, default=7200)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="resume an identity-matched partial output checkpoint",
+    )
     args = parser.parse_args(argv)
     if any(target < 1 for target in args.targets) or args.max_tokens < 1 or args.timeout <= 0:
         parser.error("targets, max tokens, and timeout must be positive")
@@ -266,6 +271,76 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         parser.error("target plus output budget exceeds the served 1,048,576-token context")
     args.url = args.url.rstrip("/")
     return args
+
+
+def case_key(result: dict[str, Any]) -> tuple[int, float, int]:
+    return (
+        int(result["target_tokens"]),
+        float(result["depth"]),
+        int(result["seed"]),
+    )
+
+
+def build_payload(
+    *,
+    plan: dict[str, Any],
+    model: str,
+    results: list[dict[str, Any]],
+) -> dict[str, Any]:
+    by_target = {
+        str(target): {
+            "n": sum(result["target_tokens"] == target for result in results),
+            "completed": sum(result["target_tokens"] == target for result in results),
+            "passed": sum(
+                result["target_tokens"] == target and result["passed"]
+                for result in results
+            ),
+        }
+        for target in plan["targets"]
+    }
+    complete = len(results) == plan["cases"]
+    return {
+        "schema_version": 2,
+        "plan": plan,
+        "model": model,
+        "complete": complete,
+        "completed_cases": len(results),
+        "all_passed": (
+            all(result["passed"] for result in results) if complete else None
+        ),
+        "by_target": by_target,
+        "results": results,
+    }
+
+
+def write_checkpoint(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def load_checkpoint(
+    *,
+    path: Path,
+    plan: dict[str, Any],
+    model: str,
+    expected_keys: list[tuple[int, float, int]],
+) -> list[dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != 2:
+        raise RuntimeError("NIAH checkpoint schema mismatch")
+    if payload.get("plan") != plan or payload.get("model") != model:
+        raise RuntimeError("NIAH checkpoint plan/model mismatch")
+    results = payload.get("results")
+    if not isinstance(results, list):
+        raise RuntimeError("NIAH checkpoint results are malformed")
+    actual_keys = [case_key(result) for result in results]
+    if actual_keys != expected_keys[: len(actual_keys)]:
+        raise RuntimeError("NIAH checkpoint is not an exact case-order prefix")
+    if payload.get("completed_cases") != len(results):
+        raise RuntimeError("NIAH checkpoint completed-case count mismatch")
+    return results
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -283,48 +358,59 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(plan, indent=2))
         return 0
 
-    results = []
-    for target in args.targets:
-        tolerance = max(256, round(target * 0.001))
-        for seed, depth in enumerate(args.depths):
-            result = run_case(
-                url=args.url,
-                model=args.model,
-                target_tokens=target,
-                depth=depth,
-                seed=seed,
-                tolerance_tokens=tolerance,
-                max_tokens=args.max_tokens,
-                timeout=args.timeout,
-            )
-            results.append(result)
-            print(
-                f"NIAH target={target} measured={result['measured_prompt_tokens']} "
-                f"depth={depth:.2f} passed={result['passed']} "
-                f"elapsed={result['elapsed_seconds']:.1f}s",
-                flush=True,
-            )
-
-    by_target = {
-        str(target): {
-            "n": sum(result["target_tokens"] == target for result in results),
-            "passed": sum(
-                result["target_tokens"] == target and result["passed"] for result in results
-            ),
-        }
+    ordered_cases = [
+        (target, depth, seed)
         for target in args.targets
-    }
-    all_passed = all(summary["n"] == summary["passed"] for summary in by_target.values())
-    payload = {
-        "schema_version": 1,
-        "plan": plan,
-        "model": args.model,
-        "all_passed": all_passed,
-        "by_target": by_target,
-        "results": results,
-    }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        for seed, depth in enumerate(args.depths)
+    ]
+    if args.output.exists():
+        if not args.resume:
+            raise RuntimeError(
+                f"refusing to overwrite existing NIAH output without --resume: {args.output}"
+            )
+        results = load_checkpoint(
+            path=args.output,
+            plan=plan,
+            model=args.model,
+            expected_keys=ordered_cases,
+        )
+        print(
+            f"NIAH resume completed={len(results)} total={len(ordered_cases)}",
+            flush=True,
+        )
+    else:
+        results = []
+
+    for case_index, (target, depth, seed) in enumerate(ordered_cases):
+        if case_index < len(results):
+            continue
+        tolerance = max(256, round(target * 0.001))
+        result = run_case(
+            url=args.url,
+            model=args.model,
+            target_tokens=target,
+            depth=depth,
+            seed=seed,
+            tolerance_tokens=tolerance,
+            max_tokens=args.max_tokens,
+            timeout=args.timeout,
+        )
+        result["seed"] = seed
+        results.append(result)
+        write_checkpoint(
+            args.output,
+            build_payload(plan=plan, model=args.model, results=results),
+        )
+        print(
+            f"NIAH target={target} measured={result['measured_prompt_tokens']} "
+            f"depth={depth:.2f} passed={result['passed']} "
+            f"elapsed={result['elapsed_seconds']:.1f}s checkpointed=true",
+            flush=True,
+        )
+
+    payload = build_payload(plan=plan, model=args.model, results=results)
+    write_checkpoint(args.output, payload)
+    all_passed = bool(payload["all_passed"])
     print(f"NIAH verdict={'PASS' if all_passed else 'FAIL'}")
     return 0 if all_passed else 2
 

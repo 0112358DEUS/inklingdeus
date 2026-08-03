@@ -459,6 +459,77 @@ class NIAHEvalTests(unittest.TestCase):
         self.assertEqual(messages[0]["content"].count(secret), 1)
         self.assertEqual(secret, niah_eval.secret_for(512_000, 0.5, 0))
 
+    def test_checkpoints_each_case_and_resumes_exact_prefix(self):
+        def result(target: int, depth: float, passed: bool = True):
+            return {
+                "target_tokens": target,
+                "measured_prompt_tokens": target,
+                "tolerance_tokens": 256,
+                "depth": depth,
+                "record_count": 1,
+                "needle_record_index": 0,
+                "secret": "QZV-TEST-KAPPA",
+                "passed": passed,
+                "content": "QZV-TEST-KAPPA",
+                "reasoning_content": None,
+                "elapsed_seconds": 1.0,
+                "completion_tokens": 1,
+            }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "niah.json"
+            first = result(10, 0.1)
+            with mock.patch("sys.stdout", new=io.StringIO()), mock.patch.object(
+                niah_eval, "run_case", side_effect=[first, KeyboardInterrupt()]
+            ):
+                with self.assertRaises(KeyboardInterrupt):
+                    niah_eval.main(
+                        [
+                            "--targets",
+                            "10",
+                            "--depths",
+                            "0.1",
+                            "0.5",
+                            "--max-tokens",
+                            "1",
+                            "--output",
+                            str(output),
+                        ]
+                    )
+            partial = json.loads(output.read_text(encoding="utf-8"))
+            self.assertFalse(partial["complete"])
+            self.assertIsNone(partial["all_passed"])
+            self.assertEqual(partial["completed_cases"], 1)
+
+            second = result(10, 0.5)
+            with mock.patch("sys.stdout", new=io.StringIO()), mock.patch.object(
+                niah_eval, "run_case", return_value=second
+            ) as run:
+                self.assertEqual(
+                    niah_eval.main(
+                        [
+                            "--targets",
+                            "10",
+                            "--depths",
+                            "0.1",
+                            "0.5",
+                            "--max-tokens",
+                            "1",
+                            "--output",
+                            str(output),
+                            "--resume",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(run.call_count, 1)
+                self.assertEqual(run.call_args.kwargs["depth"], 0.5)
+            complete = json.loads(output.read_text(encoding="utf-8"))
+            self.assertTrue(complete["complete"])
+            self.assertTrue(complete["all_passed"])
+            self.assertEqual(complete["completed_cases"], 2)
+            self.assertEqual(complete["by_target"]["10"]["n"], 2)
+
 
 class ToolCallRegressionTests(unittest.TestCase):
     def test_detects_every_forbidden_parser_token(self):
