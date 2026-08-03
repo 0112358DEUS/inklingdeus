@@ -1,0 +1,8 @@
+ACCEPT STAGE — FA4 SPEC-OFF SCORE-MOD RELATIVE BIAS
+repo_sha=a9d4857ccf7ed586429f68bf0563a05e06a2a120
+preflight=PASS base paged-KV 14/14 and relative-bias 14/14 on both controls
+worst_rel_bias_max_abs=0.0023084282875061035 (threshold 0.05)
+runtime=PASS fa4, page 128, BF16 KV, spec off, score-mod bias, full decode graphs
+t4=PASS twice, byte exact
+shutdown=worker connection-reset traceback follows the runner's successful gate and intentional rank-0 stop
+decision=wall #26 cleared for spec-off serving; DSpark-on-FA4 remains ungated

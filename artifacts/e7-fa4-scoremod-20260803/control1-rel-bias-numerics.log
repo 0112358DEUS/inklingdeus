@@ -1,0 +1,19 @@
+/usr/local/lib/python3.12/dist-packages/torch/cuda/__init__.py:61: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/usr/local/lib/python3.12/dist-packages/torchao/quantization/quant_api.py:1731: SyntaxWarning: invalid escape sequence '\.'
+  """Configuration class for applying different quantization configs to modules or parameters based on their fully qualified names (FQNs).
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "full"}
+{"finite": true, "length": 1, "max_abs": 0.0, "mean_abs": 0.0, "mode": "swa512"}
+{"finite": true, "length": 127, "max_abs": 0.0023084282875061035, "mean_abs": 0.0002848960575647652, "mode": "full"}
+{"finite": true, "length": 127, "max_abs": 0.0023084282875061035, "mean_abs": 0.0002848960575647652, "mode": "swa512"}
+{"finite": true, "length": 128, "max_abs": 0.0021103620529174805, "mean_abs": 0.000318248727126047, "mode": "full"}
+{"finite": true, "length": 128, "max_abs": 0.0021103620529174805, "mean_abs": 0.000318248727126047, "mode": "swa512"}
+{"finite": true, "length": 129, "max_abs": 0.0019052624702453613, "mean_abs": 0.0002871695323847234, "mode": "full"}
+{"finite": true, "length": 129, "max_abs": 0.0019052624702453613, "mean_abs": 0.0002871695323847234, "mode": "swa512"}
+{"finite": true, "length": 511, "max_abs": 0.001192718744277954, "mean_abs": 0.0001705045287963003, "mode": "full"}
+{"finite": true, "length": 511, "max_abs": 0.001192718744277954, "mean_abs": 0.0001705045287963003, "mode": "swa512"}
+{"finite": true, "length": 512, "max_abs": 0.0019850730895996094, "mean_abs": 0.00018520122102927417, "mode": "full"}
+{"finite": true, "length": 512, "max_abs": 0.0019850730895996094, "mean_abs": 0.00018520122102927417, "mode": "swa512"}
+{"finite": true, "length": 513, "max_abs": 0.0019690990447998047, "mean_abs": 0.0001830223191063851, "mode": "full"}
+{"finite": true, "length": 513, "max_abs": 0.001913309097290039, "mean_abs": 0.00018246716354042292, "mode": "swa512"}
+FA4 REL BIAS NUMERICS PASS cases=14
