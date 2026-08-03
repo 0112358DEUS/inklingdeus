@@ -1,7 +1,6 @@
 # E5 — persistent compiler/JIT caches
 
-Status: **NOT RUN — optimization loop stopped after E3 success**. This remains a prepared
-follow-on experiment against the promoted block-5 champion.
+Status: **READY — next north-star iteration against the adopted block-5/CDS2 champion**.
 The new cache mounts are opt-in, so the measured champion's default launch behavior is unchanged.
 
 ## Hypothesis and gates
@@ -11,15 +10,16 @@ The new cache mounts are opt-in, so the measured champion's default launch behav
   roughly eight minutes to less than four.
 - **Only changed serving factor:** six compiler-cache directories are bind-mounted from an explicit
   host root. The image, repo SHA/worktree payload, HCA, target/speculator weights, inherited
-  speculator profile, KV dtype, context, memory
+  block-5/CDS2 speculator profile, KV dtype, context, memory
   fraction, graphs, prompts, and tokens remain fixed.
 - **Isolation:** the runner refuses an existing cache root. It captures a no-mount cold boot, primes
   the new mounts with exact n=32 traffic, then alternates six comparison boots in B-A-A-B-B-A order.
   Three no-mount and three persisted-cache warm samples prevent a warm OS model-page cache or simple
   time drift from being mistaken for a JIT-cache win.
 - **Evidence:** T4 runs on every boot and again after both compared n=32 serving arms; live Docker
-  inspection proves the six intended mounts are either all present or all absent; both nodes must
-  produce non-empty file manifests and size records.
+  inspection proves the six intended mounts are either all present or all absent and verifies the
+  complete champion command on both nodes; both nodes must produce non-empty file manifests and
+  size records.
 - **Kill criteria:** repo/image drift, pre-existing or empty cache roots, a wrong live mount, any boot
   timeout, any T4 mismatch, an arm other than exact n=32, or warm serving throughput losing at least
   one combined SE.
