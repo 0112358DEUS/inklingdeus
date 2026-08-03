@@ -1,5 +1,5 @@
 #!/bin/bash
-# E7 serving-correctness stages: SM121 FA4 with BF16 KV, score-mod bias, then optional DSpark.
+# E7 serving-correctness stages: SM121 FA4 with BF16 or native FP4 KV.
 set -euo pipefail
 
 WORKER_SSH=${WORKER_SSH:?set passwordless worker SSH}
@@ -16,6 +16,7 @@ READY_TIMEOUT=${READY_TIMEOUT:-900}
 REL_BIAS_MODE=${REL_BIAS_MODE:-sheared}
 SPEC_MODE=${SPEC_MODE:-off}
 BLOCK=${BLOCK:-5}
+KV_MODE=${KV_MODE:-bf16}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
 case "$REL_BIAS_MODE" in
@@ -38,7 +39,12 @@ case "$SPEC_MODE" in
     ;;
   *) echo "SPEC_MODE must be off or dspark" >&2; exit 2 ;;
 esac
-LABEL="e7-fa4-bf16-$SPEC_LABEL"
+case "$KV_MODE" in
+  bf16) KV_EXTRA= ;;
+  fp4) KV_EXTRA="--kv-cache-dtype fp4_mx_block16" ;;
+  *) echo "KV_MODE must be bf16 or fp4" >&2; exit 2 ;;
+esac
+LABEL="e7-fa4-$KV_MODE-$SPEC_LABEL"
 
 mkdir -p "$RESULT_DIR"
 
@@ -81,9 +87,13 @@ verify_reproducibility() {
   "$REPO_DIR/scripts/verify-fa4-vendor.py" >/dev/null
   ssh -o BatchMode=yes "$WORKER_SSH" \
     "$(printf '%q' "$WORKER_REPO/scripts/verify-fa4-vendor.py")" >/dev/null
-  local_fa4=$(IMAGE="$IMAGE" "$REPO_DIR/scripts/fa4-image-fingerprint.sh")
+  local fingerprint_script=fa4-image-fingerprint.sh
+  if [ "$KV_MODE" = fp4 ]; then
+    fingerprint_script=sparkflash-fp4-image-fingerprint.sh
+  fi
+  local_fa4=$(IMAGE="$IMAGE" "$REPO_DIR/scripts/$fingerprint_script")
   worker_fa4=$(ssh -o BatchMode=yes "$WORKER_SSH" \
-    "IMAGE=$(printf '%q' "$IMAGE") $(printf '%q' "$WORKER_REPO/scripts/fa4-image-fingerprint.sh")")
+    "IMAGE=$(printf '%q' "$IMAGE") $(printf '%q' "$WORKER_REPO/scripts/$fingerprint_script")")
   [ "$local_fa4" = "$worker_fa4" ] || {
     echo "FA4 image payload mismatch: head=$local_fa4 worker=$worker_fa4" >&2
     exit 2
@@ -117,6 +127,19 @@ verify_reproducibility() {
 }
 
 run_numerics() {
+  if [ "$KV_MODE" = fp4 ]; then
+    docker run --rm --gpus all -v "$REPO_DIR:/repo:ro" \
+      --entrypoint python3 "$IMAGE" /repo/benchmarks/fa4_sm121_fp4_paged_probe.py \
+      >"$RESULT_DIR/control1-paged-fp4-numerics.log" 2>&1
+    ssh -o BatchMode=yes "$WORKER_SSH" \
+      "docker run --rm --gpus all -v $(printf '%q' "$WORKER_REPO:/repo:ro") --entrypoint python3 $(printf '%q' "$IMAGE") /repo/benchmarks/fa4_sm121_fp4_paged_probe.py" \
+      >"$RESULT_DIR/control2-paged-fp4-numerics.log" 2>&1
+    grep -q 'FA4 PAGED FP4 NUMERICS PASS cases=14' \
+      "$RESULT_DIR/control1-paged-fp4-numerics.log"
+    grep -q 'FA4 PAGED FP4 NUMERICS PASS cases=14' \
+      "$RESULT_DIR/control2-paged-fp4-numerics.log"
+    return
+  fi
   docker run --rm --gpus all -v "$REPO_DIR:/repo:ro" \
     --entrypoint python3 "$IMAGE" /repo/benchmarks/fa4_sm121_paged_probe.py \
     >"$RESULT_DIR/control1-paged-bf16-numerics.log" 2>&1
@@ -166,7 +189,7 @@ wait_ready() {
 
 record_boot_failure() {
   {
-    echo "FAIL: FA4 BF16 $SPEC_LABEL server did not become healthy; no serving claim"
+    echo "FAIL: FA4 $KV_MODE $SPEC_LABEL server did not become healthy; no serving claim"
     echo "head log tail:"
     tail -n 160 "$RESULT_DIR/$LABEL-head.log" 2>/dev/null || true
     echo "worker log tail:"
@@ -180,7 +203,7 @@ capture_runtime_contract() {
   docker inspect inkling-sglang >"$RESULT_DIR/$LABEL-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/$LABEL-worker-inspect.json"
-  python3 - "$IMAGE" "$REL_BIAS_MODE" "$SPEC_MODE" "$BLOCK" \
+  python3 - "$IMAGE" "$REL_BIAS_MODE" "$SPEC_MODE" "$BLOCK" "$KV_MODE" \
     "$RESULT_DIR/$LABEL-head-inspect.json" \
     "$RESULT_DIR/$LABEL-worker-inspect.json" <<'PY'
 import json
@@ -191,6 +214,7 @@ expected_image = sys.argv[1]
 rel_bias_mode = sys.argv[2]
 spec_mode = sys.argv[3]
 block = sys.argv[4]
+kv_mode = sys.argv[5]
 required_pairs = {
     "--attention-backend": "fa4",
     "--page-size": "128",
@@ -205,7 +229,7 @@ required_flags = {
     "--disable-piecewise-cuda-graph",
     "--disable-prefill-cuda-graph",
 }
-for path_text in sys.argv[5:]:
+for path_text in sys.argv[6:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     command = payload["Config"]["Cmd"]
@@ -222,8 +246,19 @@ for path_text in sys.argv[5:]:
     missing = required_flags.difference(command)
     if missing:
         raise SystemExit(f"{path}: missing {sorted(missing)}")
-    if "--kv-cache-dtype" in command:
-        raise SystemExit(f"{path}: BF16 gate must not set --kv-cache-dtype")
+    if kv_mode == "bf16":
+        if "--kv-cache-dtype" in command:
+            raise SystemExit(f"{path}: BF16 gate must not set --kv-cache-dtype")
+    elif kv_mode == "fp4":
+        if command.count("--kv-cache-dtype") != 1:
+            raise SystemExit(f"{path}: expected exactly one --kv-cache-dtype")
+        actual = command[command.index("--kv-cache-dtype") + 1]
+        if actual != "fp4_mx_block16":
+            raise SystemExit(
+                f"{path}: --kv-cache-dtype={actual!r}, expected='fp4_mx_block16'"
+            )
+    else:
+        raise SystemExit(f"unsupported kv_mode: {kv_mode!r}")
     spec_pairs = {
         "--speculative-algorithm": "DSPARK",
         "--speculative-draft-model-path": "/models/dspark-draft",
@@ -257,7 +292,7 @@ for path_text in sys.argv[5:]:
             f"{path}: relative-bias env={sorted(bias_env)}, expected={sorted(expected_bias_env)}"
         )
 print(
-    "E7 runtime contract PASS attention=fa4 page=128 kv=bf16 "
+    f"E7 runtime contract PASS attention=fa4 page=128 kv={kv_mode} "
     f"spec={spec_mode} block={block if spec_mode == 'dspark' else 'none'} "
     f"rel_bias={rel_bias_mode}"
 )
@@ -314,7 +349,7 @@ start_server() {
   stop_arm
   wait_stopped
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$LABEL-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=$(printf '%q' "$SPEC") BLOCK=$(printf '%q' "$BLOCK") GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=$(printf '%q' "$INKLING_SHEARED_BIAS") MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/$LABEL-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=$(printf '%q' "$SPEC") BLOCK=$(printf '%q' "$BLOCK") GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=$(printf '%q' "$INKLING_SHEARED_BIAS") MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' "$KV_EXTRA") ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/$LABEL-head.log" \
@@ -322,7 +357,7 @@ start_server() {
     SPEC="$SPEC" BLOCK="$BLOCK" GRAPHS=1 \
     GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
     INKLING_SHEARED_BIAS="$INKLING_SHEARED_BIAS" MAXREQ=16 PAGE=128 \
-    CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS= \
+    CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS="$KV_EXTRA" \
     "$REPO_DIR/scripts/inkling-sglang-launch.sh" 0 </dev/null >/dev/null 2>&1 &
 }
 
