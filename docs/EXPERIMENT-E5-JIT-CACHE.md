@@ -1,6 +1,6 @@
 # E5 — persistent compiler/JIT caches
 
-Status: **IN PROGRESS — first session stopped fail-closed at new manifest wall #25; restart next**.
+Status: **RESTART READY — wall #25 fixed with read-only containerized manifests; new-root run next**.
 The new cache mounts are opt-in, so the measured champion's default launch behavior is unchanged.
 
 ## First live session — invalidated after prime
@@ -18,6 +18,10 @@ boots, so there is no warm-cache result or decision. This is harness wall #25, n
 Partial artifacts are retained in `artifacts/e5-jit-cache-20260803/`. The restart must use a new
 empty cache root and collect manifests through a read-only helper container; changing cache
 permissions would mutate the factor under test and is not allowed.
+
+The restart runner now mounts the cache root read-only into a short-lived helper container for
+`find` and `du`. This gives the evidence collector root traversal without changing any cache byte,
+owner, mode, serving mount, or champion flag.
 
 ## Hypothesis and gates
 

@@ -247,10 +247,14 @@ run_arm() {
 
 capture_cache_state() {
   local label=$1
-  find "$E5_CACHE_ROOT" -type f -printf '%P\t%s\n' | sort \
+  # Cache artifacts are written by the serving container as root. Traverse them from a separate
+  # root container with the host cache mounted read-only; never chmod/chown the factor under test.
+  docker run --rm \
+    --mount "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly" \
+    --entrypoint find "$IMAGE" /cache -type f -printf '%P\t%s\n' | sort \
     >"$RESULT_DIR/$label-head-cache-manifest.txt"
   ssh -o BatchMode=yes "$WORKER_SSH" \
-    "find $(printf '%q' "$E5_CACHE_ROOT") -type f -printf '%P\\t%s\\n' | sort" \
+    "docker run --rm --mount $(printf '%q' "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly") --entrypoint find $(printf '%q' "$IMAGE") /cache -type f -printf '%P\\t%s\\n' | sort" \
     >"$RESULT_DIR/$label-worker-cache-manifest.txt"
   [ -s "$RESULT_DIR/$label-head-cache-manifest.txt" ] || {
     echo "persistent cache remained empty on head" >&2
@@ -260,8 +264,11 @@ capture_cache_state() {
     echo "persistent cache remained empty on worker" >&2
     exit 2
   }
-  du -sk "$E5_CACHE_ROOT" >"$RESULT_DIR/$label-head-cache-size-kib.txt"
-  ssh -o BatchMode=yes "$WORKER_SSH" "du -sk $(printf '%q' "$E5_CACHE_ROOT")" \
+  docker run --rm \
+    --mount "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly" \
+    --entrypoint du "$IMAGE" -sk /cache >"$RESULT_DIR/$label-head-cache-size-kib.txt"
+  ssh -o BatchMode=yes "$WORKER_SSH" \
+    "docker run --rm --mount $(printf '%q' "type=bind,src=$E5_CACHE_ROOT,dst=/cache,readonly") --entrypoint du $(printf '%q' "$IMAGE") -sk /cache" \
     >"$RESULT_DIR/$label-worker-cache-size-kib.txt"
 }
 
