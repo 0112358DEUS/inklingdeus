@@ -1,9 +1,9 @@
 # E7 — SM120/121 FA4 paged-KV port
 
-Status: **IN PROGRESS — BF16 PAGED-KV GPU NUMERICS PASS, SERVING NOT YET GATED**. The pinned donor
-imports in the exact champion image on `control1`, and all 14 real-shape BF16 page-boundary cases
-pass the torch-reference tolerance. A reproducible probe and a separately tagged development-image
-baker are now present. No champion image tag, launcher default, or host configuration was changed.
+Status: **IN PROGRESS — SPEC-OFF SERVING REJECTED AT NEW WALL #26**. The pinned donor imports and
+passes all 14 real-shape BF16 page-boundary cases on both controls, but the full two-node server dies
+during decode-graph capture because SGLang forwards an unsupported `rel_bias` keyword. No T4 or
+throughput claim exists. No champion image tag, launcher default, or host configuration was changed.
 
 ## Pinned donor and provenance
 
@@ -37,6 +37,45 @@ This proof is deliberately limited: the donor covers BF16 paged KV and retains t
 but it does not carry SGLang's current MXFP8 helpers or Inkling relative-bias extensions. It is not
 a drop-in replacement for the FP4 champion. The next gate is a two-node BF16, page-128, spec-OFF T4
 run from the separate development image; DSpark and FP4 remain later gates.
+
+## Stage 2 pre-registration — spec-off serving seam
+
+- **Hypothesis:** the pinned SM120 donor can replace only the FA4 CuTe package in the current
+  SGLang image and provide a two-node SM121 Inkling serving lane with BF16 page-128 KV while
+  preserving full-attention and SWA-512 semantics.
+- **Expected effect:** correctness only; no throughput claim. The server should reach health and
+  pass two byte-exact T4 probes. The image overlay and GPU probes should take under two minutes;
+  the two-node boot should take 6–10 minutes.
+- **One coherent factor:** relative to the BF16 fallback, attention backend and its required page
+  layout move together from triton/page-1 to FA4/page-128. Speculation stays off, graphs stay on,
+  context stays 64K, and MoE/dense-FP4/network/default decode settings stay fixed.
+- **Kill criterion:** any donor/hash/image mismatch, either 14-case GPU probe failing, boot death,
+  mixed runtime flags, or one-byte T4 mismatch kills this stage before DSpark or performance work.
+  A boot-dead result becomes a new wall; no alternate graph, memory, or kernel flag may be slipped
+  into the same iteration.
+- **Reproducible command:** run scripts/run-e7-fa4-specoff.sh on control1 with its existing
+  passwordless private-link SSH to control2 and the site values supplied as environment knobs.
+
+## Stage 2 result — rejected, new wall #26
+
+The exact runner commit was `164d84bb7116ac26f726d0815b13c3fd029aadf4`. Repository payload,
+champion payload, and full FA4 payload matched between controls. Both committed GPU probes passed
+14/14 again. The target then loaded on both ranks, allocated BF16 page-128 pools
+(`full=429184`, `swa=42880` tokens per rank), and began full decode-graph capture.
+
+Capture died before health with:
+
+```text
+TypeError: flash_attn_varlen_func() got an unexpected keyword argument 'rel_bias'
+```
+
+The full SGLang wrapper always forwards its Inkling relative-bias extension, but the pinned donor
+interface lacks that keyword. The standalone kernel probe exercised full attention and SWA windows
+but did not traverse this wrapper seam. The predeclared kill criterion therefore rejects the stage;
+both containers were stopped and no T4 was attempted. This is the first dead E7 stage after the
+standalone numerical win, not two consecutive dead stages. The next E7 iteration must implement and
+numerically gate a guarded relative-bias adapter before another serve; disabling graphs or dropping
+the bias would be a different factor and is not a retry of this result.
 
 ## Why this is not a config experiment
 

@@ -78,6 +78,31 @@ def render_locked(
     return shlex.split(rendered)
 
 
+def render_bf16(root: Path, overrides: dict[str, str]) -> list[str]:
+    env = os.environ.copy()
+    env.update(
+        {
+            "DRY_RUN": "1",
+            "MASTER_IP": "192.0.2.10",
+            "IF": "enp1s0f1np1",
+            "HCA": "rocep1s0f1",
+            "GID": "3",
+            "MODELS": "/models/inkling",
+            "PERSIST_JIT_CACHE": "0",
+        }
+    )
+    env.update(overrides)
+    rendered = subprocess.run(
+        [str(root / "scripts/inkling-sglang-launch.sh"), "0"],
+        cwd=root,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return shlex.split(rendered)
+
+
 def value_after(command: list[str], flag: str) -> str:
     return command[command.index(flag) + 1]
 
@@ -218,6 +243,35 @@ def main() -> int:
     )
     assert value_after(inherited_mtp, "--speculative-algorithm") == "EAGLE"
     assert "--speculative-dspark-block-size" not in inherited_mtp
+
+    e7_command = render_bf16(
+        root,
+        {
+            "IMAGE": "local/sglang-inkling:fa4-sm121-dev",
+            "ATTN": "fa4",
+            "PAGE": "128",
+            "CTX": "65536",
+            "SPEC": "0",
+            "GRAPHS": "1",
+            "MEMFRAC": "0.85",
+            "CONTINUOUS_DECODE_STEPS": "2",
+        },
+    )
+    e7_pairs = {
+        "--attention-backend": "fa4",
+        "--page-size": "128",
+        "--context-length": "65536",
+        "--moe-runner-backend": "marlin",
+        "--mem-fraction-static": "0.85",
+        "--num-continuous-decode-steps": "2",
+    }
+    for flag, value in e7_pairs.items():
+        assert e7_command.count(flag) == 1
+        assert value_after(e7_command, flag) == value
+    assert "--kv-cache-dtype" not in e7_command
+    assert "--speculative-algorithm" not in e7_command
+    assert "--disable-piecewise-cuda-graph" in e7_command
+    assert "--disable-prefill-cuda-graph" in e7_command
     print("launch render PASS")
     return 0
 
