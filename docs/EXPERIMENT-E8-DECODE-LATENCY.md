@@ -1,7 +1,6 @@
 # E8 — decode-latency micro-tuning: NCCL protocol, continuous decode steps, KV splits
 
-Status: **IN PROGRESS — continuous decode steps 2 accepted; separate champion-adoption validation
-next**. This measurement commit does not yet change the champion's default launch behavior.
+Status: **IN PROGRESS — continuous decode steps 2 adopted as champion; KV-split subgroup next**.
 
 The fail-closed runner was hardened before measurement: it rejects acceptance loss at one combined
 SE for every arm, rejects per-request latency regression at one combined SE for `cds` arms, records
@@ -57,6 +56,29 @@ did not clear the throughput rule. The accepted steps-2 candidate now proceeds t
 separate champion-adoption procedure: promote the launcher default, re-run T4 and
 `chat_bench --task all`, and only then publish new champion numbers. No default changes in this
 measurement commit.
+
+### Champion adoption gate — complete
+
+The default promotion was validated on 2026-08-03 from exact SHA
+`63c65c572f42d04756a389e140dc49a497596af0`, matched repo payload
+`51f45e78a61f0f7da91a37c8b15a3691f7ca3765ac384bb915a277c03ba3501c`, and matched image payload
+`b2272bfef54e3dd37eea30b67a1fa8c3ae54f5f1b4c877e1a6661903a4a8ac61`. Both node commands
+contained exactly one `--num-continuous-decode-steps 2` and the full champion contract; neither had
+an NCCL or ragged override. T4 was byte-exact before and after `chat_bench --task all`.
+
+| adoption task | n | tok/s | accept |
+|---|---:|---:|---:|
+| GSM8K-style | 32 | 48.738 +/- 0.585 | 4.188 +/- 0.053 |
+| code | 32 | 33.226 +/- 0.478 | 2.834 +/- 0.039 |
+| chat | 32 | 26.330 +/- 0.371 | 2.149 +/- 0.033 |
+| open-ended | 32 | 26.225 +/- 0.323 | 2.138 +/- 0.026 |
+| pooled | 128 | 33.630 +/- 0.844 | 2.827 +/- 0.077 |
+
+Evidence is in `artifacts/e8-cds2-adoption-20260803/`. The all-task JSON hashes to
+`685b804f69bb236e646cffc805bd2878212c254eb9de5e72fcf509239e730298`; both T4 records hash to
+`aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`. The champion default is
+therefore promoted to continuous decode steps 2. The E8 runner now inherits that value for every
+arm and defaults to the only remaining factor group, KV splits.
 
 Evidence is in `artifacts/e8-cds-20260803/`. The baseline, steps-2, and steps-4 benchmark JSON
 hashes are `134421549d7f2417e67897bd505a6c37208ca30205033fa411160f9e27d3d3d3`,

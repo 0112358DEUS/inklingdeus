@@ -1,0 +1,27 @@
+repo_sha=63c65c572f42d04756a389e140dc49a497596af0
+repo_payload=51f45e78a61f0f7da91a37c8b15a3691f7ca3765ac384bb915a277c03ba3501c
+image_payload=b2272bfef54e3dd37eea30b67a1fa8c3ae54f5f1b4c877e1a6661903a4a8ac61
+champion runtime contract PASS
+T4 LOSSLESS PASS
+gsm8k/1      n=  8  tok/s 50.71 +/- 0.45  accept 4.386 +/- 0.039
+gsm8k/2      n=  8  tok/s 47.52 +/- 0.43  accept 4.040 +/- 0.033
+gsm8k/3      n=  8  tok/s 51.63 +/- 0.08  accept 4.444 +/- 0.000
+gsm8k/4      n=  8  tok/s 45.09 +/- 1.34  accept 3.881 +/- 0.124
+gsm8k        n= 32  tok/s 48.74 +/- 0.58  accept 4.188 +/- 0.053
+code/1       n=  8  tok/s 35.08 +/- 1.03  accept 3.029 +/- 0.034
+code/2       n=  8  tok/s 34.10 +/- 1.07  accept 2.894 +/- 0.096
+code/3       n=  8  tok/s 33.11 +/- 0.28  accept 2.828 +/- 0.028
+code/4       n=  8  tok/s 30.62 +/- 0.45  accept 2.585 +/- 0.041
+code         n= 32  tok/s 33.23 +/- 0.48  accept 2.834 +/- 0.039
+chat/1       n=  8  tok/s 28.18 +/- 0.51  accept 2.325 +/- 0.043
+chat/2       n=  8  tok/s 27.35 +/- 0.55  accept 2.230 +/- 0.048
+chat/3       n=  8  tok/s 25.95 +/- 0.47  accept 2.110 +/- 0.040
+chat/4       n=  8  tok/s 23.84 +/- 0.31  accept 1.931 +/- 0.027
+chat         n= 32  tok/s 26.33 +/- 0.37  accept 2.149 +/- 0.033
+open-ended/1 n=  8  tok/s 24.35 +/- 0.48  accept 1.984 +/- 0.041
+open-ended/2 n=  8  tok/s 27.92 +/- 0.30  accept 2.252 +/- 0.027
+open-ended/3 n=  8  tok/s 25.64 +/- 0.54  accept 2.112 +/- 0.045
+open-ended/4 n=  8  tok/s 26.98 +/- 0.43  accept 2.204 +/- 0.038
+open-ended   n= 32  tok/s 26.23 +/- 0.32  accept 2.138 +/- 0.026
+pooled       n=128  tok/s 33.63 +/- 0.84  accept 2.827 +/- 0.077
+T4 LOSSLESS PASS

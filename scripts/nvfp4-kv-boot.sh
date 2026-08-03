@@ -1,7 +1,7 @@
 #!/bin/bash
 # CHAMPION LAUNCHER: Inkling-Small + DSpark + NVFP4 KV @ 1,048,576-token context.
-#   pool ~1,082,627 tokens (exceeds the context) | lossless | throughput is task-dependent:
-#   26.01 +/- 0.33 tok/s / accept 2.093 +/- 0.026 on open-ended work (n=32)
+#   pool 1,331,001 tokens in the E8 adoption run (exceeds the context) | lossless | task-dependent:
+#   26.23 +/- 0.32 tok/s / accept 2.138 +/- 0.026 on open-ended work (n=32)
 #   (see README "Throughput depends heavily on workload"). CTX=65536 for the short-context
 #   profile (same speed, 1.1M pool).
 #

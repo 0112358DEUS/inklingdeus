@@ -8,12 +8,13 @@ block 5. E4 re-baselined that champion in the same session at **26.57 +/- 0.33 t
 **2.142 +/- 0.026 accept**, with byte-exact T4 before and after, then rejected native width-1 MTP
 at its predeclared boot-dead gate. E8 retained NCCL autotuning after three forced-protocol arms
 produced no adoptable gain, then accepted continuous decode steps 2 at +0.645 tok/s with acceptance
-and latency improvements. Separate champion-adoption validation is next.
+and latency improvements. The exact-default all-task adoption gate passed; KV splits are next.
 
-North-star distance at the accepted E8 steps-2 candidate, pending champion validation:
+North-star distance on the adopted E8 steps-2 champion:
 
-- **N1:** 5.47 tok/s below 32 tok/s on the 26.533 +/- 0.299 open-ended n=32 candidate.
-- **N2:** 0.642 accept below 2.8 on the 2.158 +/- 0.023 candidate; no finetuned draft exists yet.
+- **N1:** 5.77 tok/s below 32 tok/s on the 26.225 +/- 0.323 all-task-gate open-ended n=32 result.
+- **N2:** 0.662 accept below 2.8 on the 2.138 +/- 0.026 open-ended result; no finetuned draft
+  exists yet. The pooled/task-class values are not substitutes for the N2 gate.
 - **N3:** no FA4 serving lane on sm_121; E7 remains engineering work.
 - **N4:** NIAH@1M, full GSM8K, tool regression, four upstream submissions, and current-image
   rebase are all still open.
@@ -24,7 +25,7 @@ North-star distance at the accepted E8 steps-2 candidate, pending champion valid
 | E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
 | E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
 | E4 width-1 native MTP | **COMPLETE — REJECTED, NEW WALL #24** | Baseline 26.57 +/- 0.33 tok/s, accept 2.142 +/- 0.026, T4 x2. Candidate loaded target + MTP and allocated a 1,160,700-token pool, then the fp4 Triton extend kernel failed to parse during width-2 graph capture. No candidate serving claim. |
-| E8 decode-latency sweep | **IN PROGRESS — ACCEPT CDS=2; VALIDATE ADOPTION NEXT** | Steps 2: 26.533 +/- 0.299 vs baseline 25.888 +/- 0.302 tok/s, delta +0.645, combined SE 0.425. Accept +0.046; latency -0.153 s; T4 x2. Steps 4 +0.118, inconclusive. Next: separate default promotion plus T4 and `chat_bench --task all`; KV-split subgroup remains open. |
+| E8 decode-latency sweep | **IN PROGRESS — CDS=2 ADOPTED; KV SPLITS NEXT** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract and all four task classes passed at exact SHA `63c65c5`, T4 x2. Adoption open-ended 26.225 +/- 0.323 tok/s. Next: KV splits 4/16 against this champion. |
 | E5 persistent JIT caches | **OPEN** | `docs/EXPERIMENT-E5-JIT-CACHE.md`; empty-root prime, 3x/arm balanced warm boots, T4, n=32 no-regression gate. |
 | E6 mem-fraction under C8-C16 | **OPEN** | `docs/EXPERIMENT-E6-MEMFRAC.md`; active-earlyoom preflight, scoped 12-GiB guard, T4, chat n=32 at C8/C16. |
 | E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
