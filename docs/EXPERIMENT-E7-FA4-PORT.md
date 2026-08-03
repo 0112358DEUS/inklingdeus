@@ -353,6 +353,29 @@ Raw chat samples, positional acceptance histograms, all six T4 records, capacity
 container inspections, rank logs, and the machine decision are in
 `artifacts/e7-fa4-fp4-block-sweep-f79ed99/`.
 
+### Stage 5A.1 pre-registration — block-16 scale-hoisted reader
+
+- **Profiled mechanism:** the correctness-first reader assigns one packed byte to a thread at a
+  time. Because eight consecutive bytes share one UE8M0 scale, it reloads that byte and evaluates
+  `exp2(scale - 127)` eight times per 16-element block. At a 128x128 K or V tile this is 8,192
+  scale loads/exp2 evaluations instead of the format-minimum 1,024.
+- **One implementation factor:** change loop ownership from one packed byte to one complete
+  block-16 group. Each participating thread loads one scale, expands it once, then decodes the
+  group's eight packed bytes with the identical nibble-to-E2M1 algebra into the same BF16 shared
+  tile. Cache bytes, scale format, page lookup, output layout, MMA, softmax, score-mod, model,
+  DSpark block 5, graph sizes, and all launch flags stay unchanged.
+- **Expected effect:** remove seven eighths of scale loads and special-function `exp2` work from
+  both K and V tile loads. This should improve decode throughput without changing storage,
+  capacity, or numerical error. No magnitude is claimed before measurement.
+- **Primitive gate:** both controls must again pass all 14 full/SWA page-boundary cases, with
+  byte-identical payload/scale inputs and max absolute error no worse than the 0.05 contract.
+- **Serving gate:** the separately tagged image must preserve the >=1,256,984-token pool, locked
+  runtime contract, graph capture, and two exact T4 responses under block 5.
+- **Adoption gate:** a same-session scalar-versus-scale-hoisted open-ended n=32 A/B, T4-bracketed,
+  must show the optimized lower 1-SE throughput bound above the scalar upper bound. Any numerical
+  mismatch, boot failure, T4 mismatch, or overlapping/worse throughput rejects the change.
+- **Cost bound:** one image/primitive build, one serving correctness launch, and one two-arm A/B.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
