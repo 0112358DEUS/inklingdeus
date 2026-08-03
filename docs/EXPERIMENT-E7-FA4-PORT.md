@@ -462,6 +462,23 @@ contract are in `artifacts/e7-fa4-fp4-mtp-width1-18ff162/`.
 - **No adoption claim:** a pass permits one power-instrumented, same-session DSpark-versus-MTP A/B;
   it does not change the champion's 0.85 default.
 
+### Stage 5A.3 result — rejected, capacity is not monotonic at this margin
+
+Exact runner commit `94d1ef6893f067b5caecbc91d4b4dc573c6f14f2` changed only the MTP
+candidate's static fraction to 0.851 and machine-checked that value on both ranks. Repo, image, and
+MTP-weight identities matched; native MTP again loaded, captured the two-token FA4 target-verify
+graph, reached health, and proved no external draft allocation.
+
+The pool nevertheless fell to 1,163,904 full tokens, 93,080 below the gate and 89,344 below the
+prior 0.850 run. Model/MTP available-memory snapshots were comparable, so the small fraction
+increase was dominated by runtime profiling/allocation variability rather than producing a
+monotonic 3,736-token rescue. The runner rejected before T4 as required. This invalidates the
+minimal-memory hypothesis; no higher fraction is inferred or attempted from this result.
+
+Raw evidence is in `artifacts/e7-fa4-fp4-mtp-rescue-94d1ef6/`. Native MTP remains a valuable FA4
+graph breakthrough but is not the Stage 5A candidate; DSpark block 5 remains selected for quality
+and further performance work.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
