@@ -1,0 +1,1 @@
+E7 runtime contract PASS attention=fa4 page=128 kv=fp4 spec=off block=none rel_bias=scoremod

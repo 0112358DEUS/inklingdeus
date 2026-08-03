@@ -267,6 +267,27 @@ kernel, cache format, model, graph, network, or champion flag. The two failed la
 original Stage 5A serving-attempt bound; this documented dispatch correction starts the next
 bounded routing rung. Neither attempt reached health or T4, and both containers were stopped.
 
+### Stage 5A routing rung result — spec-off serving pass
+
+Exact commit `9f62de49ca6318a8008d03750e06eb8d24683751` added only the documented
+version-4 dispatcher seam and an executable capacity assertion. Independently baked Control 1 and
+Control 2 images had different Docker layer IDs but the same complete payload fingerprint
+`8b88229301b6b5817cec177c7570d8b1ee24a88640c24bb2d75aeb09f4b11a7f`. Both FP4 paged
+numerical probes passed 14/14 before serving.
+
+The two-node target allocated `full_layer_tokens=1537152` and `swa_layer_tokens=153600`. The
+full pool exceeded the 1,256,984-token gate by 280,168 tokens (22.29%). It captured all 12 locked
+decode graph tiers in 179.88 seconds, reached health with 13.96 GB available, and the runtime
+inspection proved FA4/page-128/`fp4_mx_block16`/score-mod/spec-off on both ranks. Two consecutive
+T4 responses matched the frozen expected bytes and SHA-256 exactly. The runner then intentionally
+stopped both containers.
+
+Raw identities, independent numerical logs, container inspections, server logs, capacity/runtime
+contracts, and both T4 records are in `artifacts/e7-fa4-fp4-specoff-9f62de4/`. This clears native
+FP4 storage for spec-off serving correctness and the target-capacity moonshot gate. It is not yet
+a DSpark, 1M NIAH, quality, throughput, or adoption result; the next gate reuses this exact image
+and changes only speculation from off to DSpark block 5.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
