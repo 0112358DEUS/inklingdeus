@@ -1,5 +1,18 @@
 # Roadmap
 
+## Expanded user goal — significantly exceed MiaAI-Lab
+
+The user expanded completion on 2026-08-03 from hitting any one original north star to proving
+all-aspects superiority over MiaAI-Lab's pinned public result. The authoritative scorecard is
+[`docs/MIAAI-PLUS-GOAL.md`](MIAAI-PLUS-GOAL.md): every published C1–C8 throughput/TTFT cell must
+clear a 10% confidence-bound margin, C8 must not regress from C6, and the same candidate must also
+pass real-chat >=37.3 tok/s, accept >=2.8, T4, >=1,256,984 usable KV tokens, NIAH@1M, full GSM8K,
+tools, reliability, reproducibility, and warm boot. Original N1–N4 remain intermediate milestones;
+none alone completes the expanded goal. The flagship **Inkling SparkFlash-1M** moonshot adds an
+upstream-quality SM121 FA4+native-FP4-KV contribution, a native-MTP or true compact-verify
+breakthrough, real chat >=40 tok/s, C8 >=100 tok/s, acceptance >=3.2 (or draft-free native MTP),
+and measured >=1.5x champion tokens/joule.
+
 ## Active north-star loop — control1/control2
 
 The north-star loop resumed from current `main` on 2026-08-03. Completed rows are immutable:

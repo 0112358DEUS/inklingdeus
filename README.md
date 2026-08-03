@@ -276,6 +276,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `docs/DRAFT-FINETUNE-PLAN.md` | the remaining accept lever (+ A4Q applicability appendix) |
 | `docs/EXPERIMENT-E7-FA4-PORT.md` | pinned SM120 donor and the pre-implementation SGLang port gates |
 | `docs/MIAAI-BENCHMARK-CROSSWALK.md` | pinned MiaAI C1/C8 diagnostic targets and comparability boundary |
+| `docs/MIAAI-PLUS-GOAL.md` | expanded all-aspects superiority scorecard and execution order |
 | `docs/ROADMAP.md` | done / blocked / why |
 | `benchmarks/chat_bench.py` | chat-templated 4-seed × 8-rep harness for serving comparisons |
 | `benchmarks/concurrency_bench.py` | chat-templated exact-n C1→C16 aggregate-throughput harness |
