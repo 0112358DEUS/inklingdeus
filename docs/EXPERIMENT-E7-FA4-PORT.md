@@ -328,6 +328,31 @@ Raw dual-control logs, identity, machine-checked contract, and decision are in
 allocation, capacity, spec-off serving, DSpark serving, and T4 gates. Quality, 1M-context behavior,
 performance, energy, soak, and upstream readiness remain; the champion is still unchanged.
 
+### Stage 5A DSpark block sweep — block 5 selected
+
+Exact runner commit `f79ed99f6c32b4c0c6705124df01095d8a7fe9c3` reused the unchanged
+SparkFlash image and ran blocks 7, 5, and 6 in one contiguous measurement session. Every arm
+proved the locked FA4/page-128/FP4/score-mod runtime on both ranks, retained at least 1,256,984
+full tokens, initialized and graph-folded its declared DSpark width, completed exactly 32
+chat-templated open-ended samples, and passed T4 before and after measurement.
+
+| Block | Full tokens | Open-ended tok/s | Accept length | T4 pre/post |
+|---:|---:|---:|---:|---:|
+| 7 | 1,349,760 | 24.258 +/- 0.286 | 2.183 +/- 0.023 | PASS/PASS |
+| 5 | 1,371,264 | 25.267 +/- 0.320 | 2.115 +/- 0.025 | PASS/PASS |
+| 6 | 1,276,800 | 24.824 +/- 0.287 | 2.163 +/- 0.023 | PASS/PASS |
+
+Block 5 improved throughput over block 7 by 1.009 tok/s, or 2.35 combined standard errors; its
+lower 1-SE bound (24.946) also cleared block 7's upper bound (24.544). Block 6 gained 0.566 tok/s
+but its error bars overlapped, so it was rejected by the frozen selector. Block 5 is the measured
+Stage 5A candidate. Its 25.267 tok/s result is a candidate-selection result, not a moonshot speed
+pass: it remains below the 40 tok/s lower-bound goal and below the separately measured champion
+until a same-session A/B proves otherwise.
+
+Raw chat samples, positional acceptance histograms, all six T4 records, capacity/runtime contracts,
+container inspections, rank logs, and the machine decision are in
+`artifacts/e7-fa4-fp4-block-sweep-f79ed99/`.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
