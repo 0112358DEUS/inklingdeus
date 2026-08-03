@@ -1,9 +1,7 @@
 # E8 — decode-latency micro-tuning: NCCL protocol, continuous decode steps, KV splits
 
-Status: **IN PROGRESS — NCCL protocol subgroup complete with no adoption; continuous-decode-step
-subgroup next**. Nothing in this branch changes the measured champion's default launch behavior
-(the new `NCCL_ALGO`/`NCCL_PROTO` launcher knobs inject only when explicitly set, and
-`locked-experiment-launch.sh` pins them empty for every other experiment).
+Status: **IN PROGRESS — continuous decode steps 2 accepted; separate champion-adoption validation
+next**. This measurement commit does not yet change the champion's default launch behavior.
 
 The fail-closed runner was hardened before measurement: it rejects acceptance loss at one combined
 SE for every arm, rejects per-request latency regression at one combined SE for `cds` arms, records
@@ -38,6 +36,33 @@ Evidence is in `artifacts/e8-proto-20260803/`. The four benchmark JSON hashes ar
 `46f8995500f3e86da9d1d72d361a73056a060c464a283134b74f29755458881e` in table order. All eight
 pre/post T4 records hash to
 `aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`.
+
+## Continuous-decode-step subgroup — live result
+
+The continuous-decode-step subgroup ran on the same pair on 2026-08-03 from exact repo SHA
+`d5e1a015799e0da8bbf44a08a91ca33503209e45`, with matched repo payload
+`03cf58ee92c2123e392d54ffa32cd2bf7beb17079ebb9e38d54411443a7c74d5` and the same matched image
+payload. Each candidate changed only `--num-continuous-decode-steps`, passed its two-node runtime
+contract, and produced byte-identical T4 output before and after exact open-ended `n=32`.
+
+| arm | tok/s | delta vs baseline | accept | mean request latency | decision |
+|---|---:|---:|---:|---:|---|
+| baseline / steps 1 | 25.888 +/- 0.302 | — | 2.112 +/- 0.025 | 6.208 +/- 0.075 s | reference |
+| steps 2 | 26.533 +/- 0.299 | +0.645 | 2.158 +/- 0.023 | 6.055 +/- 0.071 s | **ACCEPT** |
+| steps 4 | 26.006 +/- 0.307 | +0.118 | 2.109 +/- 0.024 | 6.179 +/- 0.073 s | INCONCLUSIVE |
+
+Steps 2 cleared the +0.5 tok/s threshold and the one-combined-SE throughput rule (combined SE
+0.425), while acceptance improved by 0.046 and mean request latency improved by 0.153 s. Steps 4
+did not clear the throughput rule. The accepted steps-2 candidate now proceeds through the
+separate champion-adoption procedure: promote the launcher default, re-run T4 and
+`chat_bench --task all`, and only then publish new champion numbers. No default changes in this
+measurement commit.
+
+Evidence is in `artifacts/e8-cds-20260803/`. The baseline, steps-2, and steps-4 benchmark JSON
+hashes are `134421549d7f2417e67897bd505a6c37208ca30205033fa411160f9e27d3d3d3`,
+`8446b547d134c29cba2cd2a59849876dd07c48889343fa219d922704e27b4acd`, and
+`fcd41a4c2f7cba43f37f7bb273bea73f64029fdf64555472d1343d4ab1330010`. All six pre/post T4
+records hash to `aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`.
 
 ## Hypothesis and gates
 

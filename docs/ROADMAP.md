@@ -6,13 +6,14 @@ The north-star loop resumed from current `main` on 2026-08-03. Completed rows ar
 E1 retained the single-HCA transport, E2 was killed as not applicable, and E3 promoted DSpark
 block 5. E4 re-baselined that champion in the same session at **26.57 +/- 0.33 tok/s** and
 **2.142 +/- 0.026 accept**, with byte-exact T4 before and after, then rejected native width-1 MTP
-at its predeclared boot-dead gate. E8's NCCL protocol subgroup then retained autotuning after three
-forced-protocol arms produced no adoptable gain; its continuous-decode-step subgroup is next.
+at its predeclared boot-dead gate. E8 retained NCCL autotuning after three forced-protocol arms
+produced no adoptable gain, then accepted continuous decode steps 2 at +0.645 tok/s with acceptance
+and latency improvements. Separate champion-adoption validation is next.
 
-North-star distance after the E8 protocol subgroup's fresh baseline:
+North-star distance at the accepted E8 steps-2 candidate, pending champion validation:
 
-- **N1:** 5.81 tok/s below 32 tok/s on the current 26.189 +/- 0.321 open-ended n=32 baseline.
-- **N2:** 0.668 accept below 2.8; no finetuned draft exists yet.
+- **N1:** 5.47 tok/s below 32 tok/s on the 26.533 +/- 0.299 open-ended n=32 candidate.
+- **N2:** 0.642 accept below 2.8 on the 2.158 +/- 0.023 candidate; no finetuned draft exists yet.
 - **N3:** no FA4 serving lane on sm_121; E7 remains engineering work.
 - **N4:** NIAH@1M, full GSM8K, tool regression, four upstream submissions, and current-image
   rebase are all still open.
@@ -23,7 +24,7 @@ North-star distance after the E8 protocol subgroup's fresh baseline:
 | E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
 | E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
 | E4 width-1 native MTP | **COMPLETE — REJECTED, NEW WALL #24** | Baseline 26.57 +/- 0.33 tok/s, accept 2.142 +/- 0.026, T4 x2. Candidate loaded target + MTP and allocated a 1,160,700-token pool, then the fp4 Triton extend kernel failed to parse during width-2 graph capture. No candidate serving claim. |
-| E8 decode-latency sweep | **IN PROGRESS — PROTOCOL NULL; CDS NEXT** | Protocol baseline 26.189 +/- 0.321 tok/s. LL -0.381, LL128 -0.337, Simple +0.059 tok/s; all T4 x2 and acceptance-safe, none cleared +0.5/non-overlap. Retain autotuning. Next: continuous decode steps 2/4 against a new same-session baseline. |
+| E8 decode-latency sweep | **IN PROGRESS — ACCEPT CDS=2; VALIDATE ADOPTION NEXT** | Steps 2: 26.533 +/- 0.299 vs baseline 25.888 +/- 0.302 tok/s, delta +0.645, combined SE 0.425. Accept +0.046; latency -0.153 s; T4 x2. Steps 4 +0.118, inconclusive. Next: separate default promotion plus T4 and `chat_bench --task all`; KV-split subgroup remains open. |
 | E5 persistent JIT caches | **OPEN** | `docs/EXPERIMENT-E5-JIT-CACHE.md`; empty-root prime, 3x/arm balanced warm boots, T4, n=32 no-regression gate. |
 | E6 mem-fraction under C8-C16 | **OPEN** | `docs/EXPERIMENT-E6-MEMFRAC.md`; active-earlyoom preflight, scoped 12-GiB guard, T4, chat n=32 at C8/C16. |
 | E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
@@ -33,9 +34,9 @@ North-star distance after the E8 protocol subgroup's fresh baseline:
 | Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Exhaustion counter: **1 / 4**. E4 was rejected but localized a new boot-dead wall, so it does not
-count. E8's protocol subgroup had no adoption, no new wall, and no profiling win, so it is the
-first consecutive null iteration.
+Exhaustion counter: **0 / 4**. The E8 protocol subgroup was one null iteration, then the accepted
+steps-2 measurement reset the consecutive-null count. E4 also does not count because it localized
+a new boot-dead wall.
 
 ## Historical campaigns
 

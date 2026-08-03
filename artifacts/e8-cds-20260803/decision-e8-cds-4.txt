@@ -1,0 +1,4 @@
+A=25.888+/-0.302 tok/s  B=26.006+/-0.307 tok/s  delta=+0.118  combined_se=0.430
+accept A=2.112+/-0.025 B=2.109+/-0.024 delta=-0.003 combined_se=0.035
+latency A=6.208+/-0.075s B=6.179+/-0.073s delta=-0.029s combined_se=0.105s
+INCONCLUSIVE: do not accept or quote a serving improvement

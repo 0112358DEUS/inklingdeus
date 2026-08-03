@@ -1,0 +1,33 @@
+reproducibility PASS sha=d5e1a015799e0da8bbf44a08a91ca33503209e45 repo_payload=03cf58ee92c2123e392d54ffa32cd2bf7beb17079ebb9e38d54411443a7c74d5 image_payload=matched
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.20 +/- 0.62  accept 1.971 +/- 0.054
+open-ended/2 n=  8  tok/s 26.99 +/- 0.59  accept 2.181 +/- 0.051
+open-ended/3 n=  8  tok/s 25.57 +/- 0.18  accept 2.113 +/- 0.014
+open-ended/4 n=  8  tok/s 26.79 +/- 0.37  accept 2.184 +/- 0.032
+open-ended   n= 32  tok/s 25.89 +/- 0.30  accept 2.112 +/- 0.025
+T4 LOSSLESS PASS
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 25.50 +/- 0.46  accept 2.080 +/- 0.040
+open-ended/2 n=  8  tok/s 28.26 +/- 0.34  accept 2.272 +/- 0.030
+open-ended/3 n=  8  tok/s 25.49 +/- 0.65  accept 2.095 +/- 0.056
+open-ended/4 n=  8  tok/s 26.88 +/- 0.28  accept 2.186 +/- 0.023
+open-ended   n= 32  tok/s 26.53 +/- 0.30  accept 2.158 +/- 0.023
+T4 LOSSLESS PASS
+runtime contract PASS
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 25.42 +/- 0.36  accept 2.061 +/- 0.031
+open-ended/2 n=  8  tok/s 28.04 +/- 0.37  accept 2.253 +/- 0.036
+open-ended/3 n=  8  tok/s 24.91 +/- 0.50  accept 2.041 +/- 0.040
+open-ended/4 n=  8  tok/s 25.65 +/- 0.57  accept 2.082 +/- 0.047
+open-ended   n= 32  tok/s 26.01 +/- 0.31  accept 2.109 +/- 0.024
+T4 LOSSLESS PASS
+A=25.888+/-0.302 tok/s  B=26.533+/-0.299 tok/s  delta=+0.645  combined_se=0.425
+accept A=2.112+/-0.025 B=2.158+/-0.023 delta=+0.046 combined_se=0.034
+latency A=6.208+/-0.075s B=6.055+/-0.071s delta=-0.153s combined_se=0.103s
+ACCEPT: gain meets the threshold and 1-SE error bars do not overlap
+A=25.888+/-0.302 tok/s  B=26.006+/-0.307 tok/s  delta=+0.118  combined_se=0.430
+accept A=2.112+/-0.025 B=2.109+/-0.024 delta=-0.003 combined_se=0.035
+latency A=6.208+/-0.075s B=6.179+/-0.073s delta=-0.029s combined_se=0.105s
+INCONCLUSIVE: do not accept or quote a serving improvement
