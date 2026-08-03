@@ -1,0 +1,4 @@
+control1 host=spark-183e image=local/sglang-inkling:gb10-kvquant
+cuda.bindings.driver=present cutlass=present einops=present quack=present tvm_ffi=present
+cuda=13.0 capability=(12, 1)
+FA4 IMPORT PASS version=0.1.0 capability=(12, 1) cuda=13.0
