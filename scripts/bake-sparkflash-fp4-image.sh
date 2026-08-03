@@ -6,7 +6,7 @@ SOURCE_IMAGE=${SOURCE_IMAGE:-local/sglang-inkling:gb10-kvquant}
 TAG=${TAG:-local/sglang-inkling:sparkflash-fp4-dev}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 VENDOR="$REPO_DIR/third_party/inkling_sm120_fa4"
-PATCH_FILE="$REPO_DIR/patches/fa4-fp4/sglang-fa4-fp4.patch"
+OVERLAY_SCRIPT="$REPO_DIR/scripts/apply-sparkflash-fp4-overlay.py"
 SGL=/sgl-workspace/sglang/python/sglang
 TARGET=$SGL/kernels/ops/attention/flash_attn/cute
 CONTAINER=inkling-sparkflash-fp4-bake
@@ -23,8 +23,7 @@ docker image inspect "$SOURCE_IMAGE" >/dev/null
 docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 docker create --name "$CONTAINER" --entrypoint bash "$SOURCE_IMAGE" -lc "
   set -euo pipefail
-  cd $SGL
-  patch --batch --forward -p1 < /tmp/sglang-fa4-fp4.patch
+  python3 /tmp/apply-sparkflash-fp4-overlay.py $SGL
   python3 -m py_compile \
     $SGL/srt/layers/attention/flashattention_backend.py \
     $SGL/kernels/ops/attention/flash_attention_v4.py \
@@ -33,7 +32,7 @@ docker create --name "$CONTAINER" --entrypoint bash "$SOURCE_IMAGE" -lc "
 " >/dev/null
 
 docker cp "$VENDOR/." "$CONTAINER:$TARGET"
-docker cp "$PATCH_FILE" "$CONTAINER:/tmp/sglang-fa4-fp4.patch"
+docker cp "$OVERLAY_SCRIPT" "$CONTAINER:/tmp/apply-sparkflash-fp4-overlay.py"
 docker cp "$REPO_DIR/patches/kv-quant/srt/mem_cache/kv_quant_pools.py" \
   "$CONTAINER:$SGL/srt/mem_cache/kv_quant_pools.py"
 docker cp "$REPO_DIR/patches/kv-quant/srt/mem_cache/kv_cache_configurator.py" \
