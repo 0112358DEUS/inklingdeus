@@ -1,0 +1,1 @@
+MTP runtime contract PASS attention=fa4 page=128 kv=fp4 width=1 external_draft=none

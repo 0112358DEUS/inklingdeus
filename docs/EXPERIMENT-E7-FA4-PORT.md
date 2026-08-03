@@ -427,6 +427,24 @@ samples, histograms, contracts, inspections, logs, and the fail-closed decision 
   must be equal or faster while eliminating the external draft allocation; otherwise DSpark stays.
 - **Cost bound:** one candidate-only correctness launch, then at most one two-arm adoption A/B.
 
+### Stage 5A.2 result — FA4 clears wall #24, capacity gate rejects rung
+
+Exact runner commit `18ff162a74fd745fbc912f4e98f490f8eb58cd62` and the scalar SparkFlash
+image passed repo/image reproducibility. `mtp.safetensors` matched across controls at SHA-256
+`d286dd21cb982a0052d24ee0077ec6fc38f5a766dc6953e6c4b85c6473bfa7b3`. The target loaded,
+then the native `InklingForConditionalGenerationMTP` loaded 10 shards using 1.77 GB on rank 0;
+no `DSparkDraftModel` was loaded and the runtime contract proved EAGLE width 1 on FA4/page-128/FP4.
+
+Unlike E4's Triton run, FA4 compiled all 12 two-token target-verify graph tiers in 182.05 seconds
+and the server reached health with 14.36 GB available after capture. This is direct evidence that
+FA4 removes wall #24's Triton parser failure.
+
+The same immutable run allocated only `full_layer_tokens=1253248`, 3,736 tokens (0.297%) below the
+expanded 1,256,984-token gate. The fail-closed runner therefore rejected the rung immediately
+after health and before T4 or performance measurement. No MTP serving-correctness or speed claim
+is made. Raw identities, weight hash, runtime inspections, both rank logs, and the failed capacity
+contract are in `artifacts/e7-fa4-fp4-mtp-width1-18ff162/`.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
