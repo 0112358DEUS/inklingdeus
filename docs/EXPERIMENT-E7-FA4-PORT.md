@@ -546,3 +546,9 @@ The bounded retry changes only that serving metadata seam: `/v1/tokenize` report
 resolved `model_config.context_len`. A new fail-closed preflight requires a consistent token list
 and count plus `max_model_len=1048576` before T4 and NIAH. Kernel, FP4 representation, DSpark,
 memory, graph, model, benchmark prompts, and quality thresholds remain unchanged.
+
+The first retry preparation at `74b8da1` also stopped before launch because the repository
+fingerprint included each worktree's site-specific `.git` pointer file. Both worktrees were clean
+and their 152 runnable entries matched; only the embedded absolute metadata path differed. The
+fingerprinter now excludes `.git` in both directory and file form, with a checkout-versus-worktree
+regression test. This is an evidence-harness correction only; no serving process started.

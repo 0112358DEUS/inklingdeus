@@ -489,6 +489,25 @@ class ToolCallRegressionTests(unittest.TestCase):
 
 
 class RepoFingerprintTests(unittest.TestCase):
+    def test_excludes_git_directory_and_worktree_pointer(self):
+        with (
+            tempfile.TemporaryDirectory() as first_dir,
+            tempfile.TemporaryDirectory() as second_dir,
+        ):
+            first = Path(first_dir)
+            second = Path(second_dir)
+            for root in (first, second):
+                (root / "runner.py").write_text("print('same')\n", encoding="utf-8")
+            (first / ".git").mkdir()
+            (first / ".git" / "config").write_text("ignored\n", encoding="utf-8")
+            (second / ".git").write_text(
+                "gitdir: /different/absolute/worktree/path\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                repo_fingerprint.fingerprint(first)["sha256"],
+                repo_fingerprint.fingerprint(second)["sha256"],
+            )
+
     def test_includes_untracked_payload_and_excludes_artifacts(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

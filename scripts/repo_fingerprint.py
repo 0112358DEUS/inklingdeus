@@ -22,7 +22,7 @@ EXCLUDED_DIRS = {
     "artifacts",
     "node_modules",
 }
-EXCLUDED_FILES = {".DS_Store"}
+EXCLUDED_FILES = {".DS_Store", ".git"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 
 
