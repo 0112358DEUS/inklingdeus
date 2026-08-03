@@ -27,6 +27,7 @@ docker create --name "$CONTAINER" --entrypoint bash "$SOURCE_IMAGE" -lc "
   python3 -m py_compile \
     $SGL/srt/layers/attention/flashattention_backend.py \
     $SGL/kernels/ops/attention/flash_attention_v4.py \
+    $SGL/srt/server_args.py \
     $SGL/srt/mem_cache/kv_quant_pools.py \
     $SGL/srt/mem_cache/kv_cache_configurator.py
 " >/dev/null

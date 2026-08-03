@@ -23,6 +23,7 @@ def main() -> int:
     root = Path(sys.argv[1]).resolve()
     wrapper = root / "kernels/ops/attention/flash_attention_v4.py"
     backend = root / "srt/layers/attention/flashattention_backend.py"
+    server_args = root / "srt/server_args.py"
 
     replace_exact(
         wrapper,
@@ -168,6 +169,32 @@ def main() -> int:
         "layer.layer_id)\n\n            if key_cache", "layer.layer_id)\n            if key_cache"
     )
     replace_exact(backend, decode_before, decode_after)
+
+    replace_exact(
+        server_args,
+        """                        KV4_FA4_MHA_BACKEND_CHOICES = [
+                            "triton",
+                            "torch_native",
+                            "flex_attention",
+                        ]
+                        assert decode_backend in KV4_FA4_MHA_BACKEND_CHOICES, (
+""",
+        """                        KV4_FA4_MHA_BACKEND_CHOICES = [
+                            "triton",
+                            "torch_native",
+                            "flex_attention",
+                        ]
+                        if (
+                            self.kv_cache_dtype == "fp4_mx_block16"
+                            and is_sm120_supported()
+                            and self.page_size == 128
+                        ):
+                            # SparkFlash supplies the otherwise-missing native
+                            # SM120/121 FA4 packed-payload + scale reader.
+                            KV4_FA4_MHA_BACKEND_CHOICES.append("fa4")
+                        assert decode_backend in KV4_FA4_MHA_BACKEND_CHOICES, (
+""",
+    )
 
     print("SPARKFLASH FP4 SGLANG OVERLAY PASS")
     return 0
