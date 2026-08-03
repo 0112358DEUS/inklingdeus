@@ -826,10 +826,11 @@ class FlashAttentionForwardBase:
     ):
         """Decode one selected block-16 E2M1/UE8M0 page tile to BF16 SMEM.
 
-        This is intentionally a correctness-first scalar loader. It reads only
-        the page-table-selected tile and therefore never materializes a BF16
-        tensor proportional to total KV capacity. A later one-factor stage may
-        vectorize the byte loads after the numerical contract is frozen.
+        One thread owns a complete 16-element scale group: load and expand the
+        UE8M0 scale once, then decode its eight packed bytes. This preserves the
+        correctness-first nibble algebra while removing seven duplicate scale
+        loads and ``exp2`` evaluations per group. Only the page-table-selected
+        tile is touched; no BF16 object scales with total KV capacity.
         """
         assert K_or_V in ("K", "V")
         mX = (
@@ -849,15 +850,18 @@ class FlashAttentionForwardBase:
             else self.tile_hdimv
         )
         packed_dim = head_dim // 2
-        total_bytes = self.tile_n * packed_dim
-        iters = (total_bytes + self.num_threads - 1) // self.num_threads
+        scale_blocks_per_row = head_dim // 16
+        total_scale_blocks = self.tile_n * scale_blocks_per_row
+        iters = (
+            total_scale_blocks + self.num_threads - 1
+        ) // self.num_threads
         stage = smem_pipe_write if const_expr(self.num_stages > 1) else 0
 
         for i in cutlass.range_constexpr(iters):
-            linear = paged_kv_manager.thread_idx + i * self.num_threads
-            if linear < total_bytes:
-                row = linear // packed_dim
-                byte_col = linear % packed_dim
+            linear_block = paged_kv_manager.thread_idx + i * self.num_threads
+            if linear_block < total_scale_blocks:
+                row = linear_block // scale_blocks_per_row
+                scale_col = linear_block % scale_blocks_per_row
                 row_idx = block * self.tile_n + row
                 safe_row_idx = cutlass.max(row_idx, Int32(0))
                 page_idx = safe_row_idx // page_size
@@ -867,25 +871,36 @@ class FlashAttentionForwardBase:
                 # TVM-FFI exposes torch.uint8 storage as Int8 in this CUTLASS
                 # build. Keep both control-flow arms Int8, then mask after the
                 # widening conversion to recover the original byte.
-                packed = mX[page_offset, byte_col, page] if valid else cutlass.Int8(0)
-                sf = mSF[page_offset, byte_col // 8, page] if valid else cutlass.Int8(127)
-
-                packed_i = Int32(packed) & 0xFF
+                sf = (
+                    mSF[page_offset, scale_col, page]
+                    if valid
+                    else cutlass.Int8(127)
+                )
                 scale = cute.math.exp2(Float32(Int32(sf) & 0xFF) - 127.0)
-                code0 = packed_i & 0xF
-                code1 = (packed_i >> 4) & 0xF
+                byte_base = scale_col * 8
 
-                for lane in cutlass.range_constexpr(2):
-                    code = code0 if lane == 0 else code1
-                    magnitude = code & 0x7
-                    doubled = (
-                        magnitude
-                        + cutlass.max(magnitude - 4, Int32(0))
-                        + 2 * cutlass.max(magnitude - 6, Int32(0))
+                for byte_lane in cutlass.range_constexpr(8):
+                    byte_col = byte_base + byte_lane
+                    packed = (
+                        mX[page_offset, byte_col, page]
+                        if valid
+                        else cutlass.Int8(0)
                     )
-                    sign = 1.0 - 2.0 * Float32((code >> 3) & 0x1)
-                    value = 0.5 * Float32(doubled) * sign * scale
-                    sX[row, byte_col * 2 + lane, stage] = self.dtype(value)
+                    packed_i = Int32(packed) & 0xFF
+                    code0 = packed_i & 0xF
+                    code1 = (packed_i >> 4) & 0xF
+
+                    for lane in cutlass.range_constexpr(2):
+                        code = code0 if lane == 0 else code1
+                        magnitude = code & 0x7
+                        doubled = (
+                            magnitude
+                            + cutlass.max(magnitude - 4, Int32(0))
+                            + 2 * cutlass.max(magnitude - 6, Int32(0))
+                        )
+                        sign = 1.0 - 2.0 * Float32((code >> 3) & 0x1)
+                        value = 0.5 * Float32(doubled) * sign * scale
+                        sX[row, byte_col * 2 + lane, stage] = self.dtype(value)
 
 
 class FlashAttentionForwardSm80(FlashAttentionForwardBase):
