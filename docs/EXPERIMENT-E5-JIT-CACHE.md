@@ -1,7 +1,23 @@
 # E5 — persistent compiler/JIT caches
 
-Status: **READY — next north-star iteration against the adopted block-5/CDS2 champion**.
+Status: **IN PROGRESS — first session stopped fail-closed at new manifest wall #25; restart next**.
 The new cache mounts are opt-in, so the measured champion's default launch behavior is unchanged.
+
+## First live session — invalidated after prime
+
+The first session ran on 2026-08-03 from exact SHA
+`8c19e4312addca1956be57ec2efd90d8dac41c27`, matched repo payload
+`879fcd3eab274cbd2c6843173bfbe64314855e048e5105fbe1564788fcb68d6f`, and matched image bytes.
+The no-mount cold boot reached T4 in 399 seconds. The persisted-cache prime reached T4 in 384
+seconds, passed its two-node champion/mount contract, completed exact open-ended `n=32` at
+25.857 +/- 0.290 tok/s and 2.123 +/- 0.023 accept, and remained T4-exact before and after.
+
+The required host-side cache manifest then failed because root-owned CUDA cache hash directories
+were not traversable by the host user. The runner stopped before any of the six balanced comparison
+boots, so there is no warm-cache result or decision. This is harness wall #25, not serving evidence.
+Partial artifacts are retained in `artifacts/e5-jit-cache-20260803/`. The restart must use a new
+empty cache root and collect manifests through a read-only helper container; changing cache
+permissions would mutate the factor under test and is not allowed.
 
 ## Hypothesis and gates
 

@@ -1,0 +1,25 @@
+reproducibility PASS sha=8c19e4312addca1956be57ec2efd90d8dac41c27 repo_payload=879fcd3eab274cbd2c6843173bfbe64314855e048e5105fbe1564788fcb68d6f image_payload=matched
+runtime champion/cache-mount contract PASS persist=0
+T4 LOSSLESS PASS
+runtime champion/cache-mount contract PASS persist=1
+T4 LOSSLESS PASS
+open-ended/1 n=  8  tok/s 24.66 +/- 0.36  accept 2.035 +/- 0.031
+open-ended/2 n=  8  tok/s 27.63 +/- 0.28  accept 2.236 +/- 0.030
+open-ended/3 n=  8  tok/s 25.41 +/- 0.35  accept 2.105 +/- 0.029
+open-ended/4 n=  8  tok/s 25.72 +/- 0.69  accept 2.117 +/- 0.060
+open-ended   n= 32  tok/s 25.86 +/- 0.29  accept 2.123 +/- 0.023
+T4 LOSSLESS PASS
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/3’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/9’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/5’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/1’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/f’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/4’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/0’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/a’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/2’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/e’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/c’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/d’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/b’: Permission denied
+find: ‘/var/tmp/inkling-e5-8c19e43-20260803/cuda/7’: Permission denied

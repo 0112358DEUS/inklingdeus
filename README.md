@@ -229,7 +229,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 
 ## Why patches are needed
 
-`scripts/bake-image.sh` bakes them all. Full symptom → cause → fix table for **24 walls** lives in
+`scripts/bake-image.sh` bakes them all. Full symptom → cause → fix table for **25 walls** lives in
 [`docs/BUGS-AND-FIXES.md`](docs/BUGS-AND-FIXES.md). The load-bearing ones:
 
 | Area | Fix |
@@ -271,7 +271,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `patches/kv-quant/` | the KV-quantization implementation (6 files) |
 | `patches/files/` + `patches/all-patches.diff` | base GB10 patches, byte-exact and as a reviewable diff |
 | `docs/MEASUREMENT-PROTOCOL.md` | **read before benchmarking anything** |
-| `docs/BUGS-AND-FIXES.md` | 24 walls: symptom → root cause → fix |
+| `docs/BUGS-AND-FIXES.md` | 25 walls: symptom → root cause → fix |
 | `docs/KV-QUANT-IMPLEMENTATION-NOTES.md` | how the fp4 KV path works internally |
 | `docs/DRAFT-FINETUNE-PLAN.md` | the remaining accept lever (+ A4Q applicability appendix) |
 | `docs/EXPERIMENT-E7-FA4-PORT.md` | pinned SM120 donor and the pre-implementation SGLang port gates |
