@@ -8,7 +8,8 @@ block 5. E4 re-baselined that champion in the same session at **26.57 +/- 0.33 t
 **2.142 +/- 0.026 accept**, with byte-exact T4 before and after, then rejected native width-1 MTP
 at its predeclared boot-dead gate. E8 retained NCCL autotuning after three forced-protocol arms
 produced no adoptable gain, then accepted continuous decode steps 2 at +0.645 tok/s with acceptance
-and latency improvements. The exact-default all-task adoption gate passed; KV splits are next.
+and latency improvements. The exact-default all-task adoption gate passed. E8 then retained 8 KV
+splits after both alternatives lost; E5 is the next highest-value open iteration.
 
 North-star distance on the adopted E8 steps-2 champion:
 
@@ -25,8 +26,8 @@ North-star distance on the adopted E8 steps-2 champion:
 | E2 dense FP4 GEMM | **COMPLETE — NOT APPLICABLE** | `flashinfer_trtllm` unsupported on capability 121; checkpoint has no dense NVFP4 layer controlled by this flag. No serving A/B. |
 | E3 block 5/6/7 | **COMPLETE — ACCEPT block 5** | **26.007 +/- 0.334** vs block 7 at 24.747 +/- 0.208 tok/s; delta +1.260, combined SE 0.394, T4 ×6. |
 | E4 width-1 native MTP | **COMPLETE — REJECTED, NEW WALL #24** | Baseline 26.57 +/- 0.33 tok/s, accept 2.142 +/- 0.026, T4 x2. Candidate loaded target + MTP and allocated a 1,160,700-token pool, then the fp4 Triton extend kernel failed to parse during width-2 graph capture. No candidate serving claim. |
-| E8 decode-latency sweep | **IN PROGRESS — CDS=2 ADOPTED; KV SPLITS NEXT** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract and all four task classes passed at exact SHA `63c65c5`, T4 x2. Adoption open-ended 26.225 +/- 0.323 tok/s. Next: KV splits 4/16 against this champion. |
-| E5 persistent JIT caches | **OPEN** | `docs/EXPERIMENT-E5-JIT-CACHE.md`; empty-root prime, 3x/arm balanced warm boots, T4, n=32 no-regression gate. |
+| E8 decode-latency sweep | **COMPLETE — ADOPT CDS=2** | Steps 2: +0.645 tok/s vs same-session baseline, combined SE 0.425; accept +0.046; latency -0.153 s. Default contract/all-task/T4 adoption passed. Protocol forced arms were null. KV splits 4 was -0.323/inconclusive; splits 16 -0.478 and rejected on acceptance. Retain protocol autotuning and splits 8. |
+| E5 persistent JIT caches | **OPEN — NEXT** | `docs/EXPERIMENT-E5-JIT-CACHE.md`; empty-root prime, 3x/arm balanced warm boots, T4, n=32 no-regression gate. |
 | E6 mem-fraction under C8-C16 | **OPEN** | `docs/EXPERIMENT-E6-MEMFRAC.md`; active-earlyoom preflight, scoped 12-GiB guard, T4, chat n=32 at C8/C16. |
 | E7 FA4 paged-KV port | **SCOPED — ENGINEERING REQUIRED** | `docs/EXPERIMENT-E7-FA4-PORT.md`; pinned donor, four incompatible seams, staged GPU numerics/T4/quality gates; no runnable port yet |
 | Q1 chat-templated harness | **LIVE-PROVEN** | Used for E1 and E3 exact n=32 serving measurements with plan-identity checks and T4. |
@@ -35,9 +36,9 @@ North-star distance on the adopted E8 steps-2 champion:
 | Q4 C1→C16 curve | **READY — NOT RUN** | `benchmarks/concurrency_bench.py`; chat-templated exact n=32 at C1/2/4/8/16. |
 | Q5 no-GPU CI | **COMPLETE** | Python compile/tests, local Markdown links, launch dry-run, and shell syntax pass. |
 
-Exhaustion counter: **0 / 4**. The E8 protocol subgroup was one null iteration, then the accepted
-steps-2 measurement reset the consecutive-null count. E4 also does not count because it localized
-a new boot-dead wall.
+Exhaustion counter: **1 / 4**. The accepted steps-2 measurement reset the counter; E8's subsequent
+KV-split subgroup had no adoption, new wall, or profiling win and starts a new null sequence. E4
+does not count because it localized a new boot-dead wall.
 
 ## Historical campaigns
 

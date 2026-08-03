@@ -1,6 +1,6 @@
 # E8 — decode-latency micro-tuning: NCCL protocol, continuous decode steps, KV splits
 
-Status: **IN PROGRESS — continuous decode steps 2 adopted as champion; KV-split subgroup next**.
+Status: **COMPLETE — continuous decode steps 2 adopted; NCCL protocol and KV-split defaults retained**.
 
 The fail-closed runner was hardened before measurement: it rejects acceptance loss at one combined
 SE for every arm, rejects per-request latency regression at one combined SE for `cds` arms, records
@@ -77,8 +77,34 @@ an NCCL or ragged override. T4 was byte-exact before and after `chat_bench --tas
 Evidence is in `artifacts/e8-cds2-adoption-20260803/`. The all-task JSON hashes to
 `685b804f69bb236e646cffc805bd2878212c254eb9de5e72fcf509239e730298`; both T4 records hash to
 `aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`. The champion default is
-therefore promoted to continuous decode steps 2. The E8 runner now inherits that value for every
-arm and defaults to the only remaining factor group, KV splits.
+therefore promoted to continuous decode steps 2. The E8 runner inherited that value for every
+subsequent KV-split arm.
+
+## KV-split subgroup — live result
+
+The final subgroup ran on 2026-08-03 from exact adopted-champion SHA
+`1bb973cc76c6fd903c134b9f23d78ae04d29e118`, with matched repo payload
+`e21e8e0d5acbcfb3ef5c4fdf37424c6a6f422fe5a3e2202e3ef271974202ac7c` and the same matched image
+payload. Each arm retained continuous decode steps 2 and changed only
+`--triton-attention-num-kv-splits`. Both runtime contracts and all six pre/post T4 gates passed.
+
+| arm | tok/s | delta vs baseline | accept | decision |
+|---|---:|---:|---:|---|
+| baseline / splits 8 | 26.313 +/- 0.340 | — | 2.146 +/- 0.025 | reference |
+| splits 4 | 25.990 +/- 0.351 | -0.323 | 2.129 +/- 0.028 | INCONCLUSIVE — no adoption |
+| splits 16 | 25.835 +/- 0.337 | -0.478 | 2.108 +/- 0.026 | REJECT — acceptance loss |
+
+Splits 4 was slower and did not clear the throughput rule. Splits 16 was slower and its acceptance
+loss of 0.038 was at least the 0.037 combined SE, so the acceptance guard rejected it. Retain the
+SGLang default of 8 KV splits. Evidence is in `artifacts/e8-ksplit-20260803/`; the baseline,
+splits-4, and splits-16 JSON hashes are
+`ad3434e31c757bfcb7e1ec5682ec266e63e7d1ac1fe104670ad76b479bda9c57`,
+`ec29e8328cc175d8e2aab304c94e3cb858c5099ef24eae74e3076e72441ce0b9`, and
+`2f2353fd1fc07bdee7feaa77113cb8b7bf88c4dba1588f47fe761b528d393400`. All six T4 records hash to
+`aac69468d03ab55a8da2d9f15e7939103b479a8e93d9b7839e12953299119de7`.
+
+E8's adopted result is therefore exactly one default change: continuous decode steps 1 to 2.
+NCCL protocol remains autotuned and KV splits remains 8.
 
 Evidence is in `artifacts/e8-cds-20260803/`. The baseline, steps-2, and steps-4 benchmark JSON
 hashes are `134421549d7f2417e67897bd505a6c37208ca30205033fa411160f9e27d3d3d3`,

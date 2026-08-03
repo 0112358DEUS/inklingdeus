@@ -255,7 +255,7 @@ full 0.0 → 0.99 range moves accept only +0.11. Workload composition dominates 
 | `scripts/run-e4-width1-mtp-ab.sh` | DSpark block 5 vs native width-1 MTP; E4 rejected at wall #24 |
 | `scripts/run-e5-jit-cache-ab.sh` | balanced cold/prime/warm boot experiment for opt-in compiler-cache mounts |
 | `scripts/run-e6-memfrac-ab.sh` | MEMFRAC 0.85/0.68 C8/C16 experiment with host-memory evidence |
-| `scripts/run-e8-decode-latency-ab.sh` | one-factor NCCL protocol, continuous-decode-step, and KV-split sweep |
+| `scripts/run-e8-decode-latency-ab.sh` | completed one-factor E8 sweep; adopted CDS=2, retained NCCL autotuning and KV splits 8 |
 | `scripts/run-e8-cds2-adoption.sh` | exact-SHA champion runtime contract, T4, and all-task adoption gate |
 | `scripts/earlyoom-preflight.sh` | read-only check for active earlyoom and readable OOM journals |
 | `scripts/host-memory-guard.sh` | experiment-scoped 12-GiB guard that removes only the serving container |
