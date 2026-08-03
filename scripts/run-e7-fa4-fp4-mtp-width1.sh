@@ -13,10 +13,17 @@ GID=${GID:-3}
 RESULT_DIR=${RESULT_DIR:-artifacts/e7-fa4-fp4-mtp-width1}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
 MIN_FULL_TOKENS=${MIN_FULL_TOKENS:-1256984}
+MIN_POST_GRAPH_GB=${MIN_POST_GRAPH_GB:-13}
+MEMFRAC=${MEMFRAC:-0.85}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 MTP_ARGS="--kv-cache-dtype fp4_mx_block16 --speculative-algorithm EAGLE --speculative-num-steps 1 --speculative-eagle-topk 1 --speculative-num-draft-tokens 2 --enable-multi-layer-eagle --speculative-use-rejection-sampling"
 
 mkdir -p "$RESULT_DIR"
+awk -v value="$MEMFRAC" \
+  'BEGIN {exit !(value ~ /^[0-9]+([.][0-9]+)?$/ && value > 0 && value < 1)}' || {
+  echo "MEMFRAC must be a number strictly between 0 and 1" >&2
+  exit 2
+}
 
 stop_arm() {
   docker rm -f inkling-sglang >/dev/null 2>&1 || true
@@ -152,14 +159,14 @@ verify_runtime() {
   docker inspect inkling-sglang >"$RESULT_DIR/mtp-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/mtp-worker-inspect.json"
-  python3 - "$IMAGE" "$RESULT_DIR/mtp-head-inspect.json" \
+  python3 - "$IMAGE" "$MEMFRAC" "$RESULT_DIR/mtp-head-inspect.json" \
     "$RESULT_DIR/mtp-worker-inspect.json" <<'PY' \
     | tee "$RESULT_DIR/runtime-contract.txt"
 import json
 import sys
 from pathlib import Path
 
-image = sys.argv[1]
+image, memfrac = sys.argv[1:3]
 required = {
     "--attention-backend": "fa4",
     "--page-size": "128",
@@ -171,9 +178,10 @@ required = {
     "--speculative-num-draft-tokens": "2",
     "--moe-runner-backend": "marlin",
     "--fp4-gemm-backend": "flashinfer_trtllm",
+    "--mem-fraction-static": memfrac,
 }
 required_flags = {"--enable-multi-layer-eagle", "--speculative-use-rejection-sampling"}
-for path_text in sys.argv[2:]:
+for path_text in sys.argv[3:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     if payload["Config"]["Image"] != image:
@@ -196,12 +204,16 @@ for path_text in sys.argv[2:]:
         raise SystemExit(f"{path}: mixed speculative paths: {sorted(present)}")
     if "SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0" not in set(payload["Config"]["Env"]):
         raise SystemExit(f"{path}: score-mod bias contract failed")
-print("MTP runtime contract PASS attention=fa4 page=128 kv=fp4 width=1 external_draft=none")
+print(
+    f"MTP runtime contract PASS attention=fa4 page=128 kv=fp4 width=1 "
+    f"memfrac={memfrac} external_draft=none"
+)
 PY
 }
 
 verify_capacity_and_logs() {
-  python3 - "$RESULT_DIR/mtp-head.log" "$MIN_FULL_TOKENS" <<'PY' \
+  python3 - "$RESULT_DIR/mtp-head.log" "$MIN_FULL_TOKENS" \
+    "$MIN_POST_GRAPH_GB" <<'PY' \
     | tee "$RESULT_DIR/capacity-contract.txt"
 import re
 import sys
@@ -209,6 +221,7 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 minimum = int(sys.argv[2])
+minimum_post_graph_gb = float(sys.argv[3])
 text = path.read_text(encoding="utf-8", errors="replace")
 matches = re.findall(
     r"Use sliding window memory pool\. full_layer_tokens=(\d+), "
@@ -229,9 +242,21 @@ if missing:
     raise SystemExit(f"{path}: missing MTP log proofs: {missing}")
 if "type=DSparkDraftModel" in text:
     raise SystemExit(f"{path}: external DSpark draft was loaded")
+headroom_matches = re.findall(
+    r"Capture target verify CUDA graph end\..*?avail mem=([0-9.]+) GB", text
+)
+if not headroom_matches:
+    raise SystemExit(f"{path}: missing post-capture memory headroom")
+post_graph_gb = float(headroom_matches[-1])
+if post_graph_gb < minimum_post_graph_gb:
+    raise SystemExit(
+        f"MTP HEADROOM FAIL post_graph_gb={post_graph_gb} "
+        f"minimum={minimum_post_graph_gb}"
+    )
 print(
     f"MTP CAPACITY PASS full_layer_tokens={full} minimum={minimum} "
-    f"headroom={full - minimum} swa_layer_tokens={swa} external_draft=none"
+    f"headroom={full - minimum} swa_layer_tokens={swa} "
+    f"post_graph_gb={post_graph_gb} external_draft=none"
 )
 PY
 }
@@ -239,11 +264,11 @@ PY
 start_server() {
   stop_arm
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/mtp-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 SPEC=0 BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' "$MTP_ARGS") ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/mtp-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=$(printf '%q' "$MEMFRAC") CTX=65536 SPEC=0 BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' "$MTP_ARGS") ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/mtp-head.log" \
-    ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=65536 \
+    ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC="$MEMFRAC" CTX=65536 \
     SPEC=0 BLOCK=5 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
     INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 \
     EXTRA_ARGS="$MTP_ARGS" \
