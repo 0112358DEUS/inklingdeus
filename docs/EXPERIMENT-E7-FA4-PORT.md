@@ -403,6 +403,30 @@ Raw correctness evidence is in `artifacts/e7-fa4-fp4-scale-hoist-correctness-b58
 samples, histograms, contracts, inspections, logs, and the fail-closed decision are in
 `artifacts/e7-scale-hoist-ab-1231e49/`.
 
+### Stage 5A.2 pre-registration — native width-1 MTP on FA4
+
+- **Hypothesis:** E4's native-MTP wall #24 was specific to Triton's FP4 target-verify parser path.
+  The now-proven FA4 FP4 target and draft route should compile the two-token EAGLE verify graph,
+  allowing Inkling's own MTP head to replace the separate 0.9B DSpark model.
+- **One coherent factor:** relative to the measured Stage 5A block-5 candidate, change speculation
+  from external DSpark block 5 to native EAGLE width 1 (`steps=1`, `topk=1`, two draft tokens,
+  multi-layer EAGLE, rejection sampling). Keep the scalar FA4 reader, FP4 format, page 128,
+  score-mod bias, graphs, model, MoE/dense backends, memory fraction, transport, and 64K context
+  unchanged.
+- **Preflight:** `mtp.safetensors` must exist and hash identically on both controls; repo and image
+  payloads must match; the runtime command must contain exactly the EAGLE path and no DSpark model
+  or flags.
+- **Correctness gate:** the target and native draft load, allocate at least 1,256,984 usable full
+  tokens, capture all target and draft graph tiers with FA4, reach health, and pass two exact T4
+  requests. The logs must prove no external draft model allocation.
+- **Kill criterion:** any MTP hash mismatch, memory shortfall, Triton fallback, mixed speculative
+  path, graph failure, health timeout, or T4 mismatch rejects the rung without changing memory,
+  graph, page, or context settings.
+- **Promotion gate:** only after correctness passes, run a same-session block-5 DSpark versus MTP
+  n=32 A/B with T4 brackets, acceptance and latency no-regression guards, and power telemetry. MTP
+  must be equal or faster while eliminating the external draft allocation; otherwise DSpark stays.
+- **Cost bound:** one candidate-only correctness launch, then at most one two-arm adoption A/B.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
