@@ -38,6 +38,24 @@ but it does not carry SGLang's current MXFP8 helpers or Inkling relative-bias ex
 a drop-in replacement for the FP4 champion. The next gate is a two-node BF16, page-128, spec-OFF T4
 run from the separate development image; DSpark and FP4 remain later gates.
 
+## Stage 2 pre-registration — spec-off serving seam
+
+- **Hypothesis:** the pinned SM120 donor can replace only the FA4 CuTe package in the current
+  SGLang image and provide a two-node SM121 Inkling serving lane with BF16 page-128 KV while
+  preserving full-attention and SWA-512 semantics.
+- **Expected effect:** correctness only; no throughput claim. The server should reach health and
+  pass two byte-exact T4 probes. The image overlay and GPU probes should take under two minutes;
+  the two-node boot should take 6–10 minutes.
+- **One coherent factor:** relative to the BF16 fallback, attention backend and its required page
+  layout move together from triton/page-1 to FA4/page-128. Speculation stays off, graphs stay on,
+  context stays 64K, and MoE/dense-FP4/network/default decode settings stay fixed.
+- **Kill criterion:** any donor/hash/image mismatch, either 14-case GPU probe failing, boot death,
+  mixed runtime flags, or one-byte T4 mismatch kills this stage before DSpark or performance work.
+  A boot-dead result becomes a new wall; no alternate graph, memory, or kernel flag may be slipped
+  into the same iteration.
+- **Reproducible command:** run scripts/run-e7-fa4-specoff.sh on control1 with its existing
+  passwordless private-link SSH to control2 and the site values supplied as environment knobs.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
