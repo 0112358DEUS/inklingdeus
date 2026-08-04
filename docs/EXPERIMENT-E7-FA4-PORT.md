@@ -949,6 +949,11 @@ evidence is in `artifacts/e7-quality-no-overlap-e55d83f/`.
 - **Hypothesis:** one of the target/draft decode graph captures or replays retains a stale FP4 KV
   pointer or shape. Launch blocking masks the illegal write, while changing the writer and scheduler
   only changes its later reporting point.
+- **Concrete source seam:** at the image's pinned SGLang commit `b7252cc6b`,
+  `MHATokenToKVPoolFP4.set_kv_buffer()` takes a capture-only multi-stream path: K payload/scales are
+  written on the current stream while V payload/scales are written on the pool's `alt_stream`, then
+  joined. Graph-off removes that branch as well as graph replay. If this rung passes, the next
+  candidate is the narrower single-stream FP4 graph store, not adoption of global graph-off.
 - **Only changed factor:** disable CUDA graphs. Restore overlap scheduling and keep the original
   compiled writer, FA4/page 128, DSpark block 5, CDS2, 1M context, C8, and all quality inputs fixed.
 - **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
