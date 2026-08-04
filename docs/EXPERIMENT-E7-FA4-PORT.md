@@ -841,3 +841,24 @@ attention reader and serving scheduler.
 - **Kill/adoption rule:** a reproduced illegal access implicates the common writer/storage path. A
   five-batch pass implicates FA4's asynchronous reader interaction but does not itself constitute a
   SparkFlash adoption result. Triton remains a diagnostic reference, not a substitution.
+
+### Stage 5A.14 result — page-128 Triton comparison rejected before serve
+
+Exact commit `61d2175c9d9d3318b3da36ca61393284fde4419f`, runnable payload
+`5c40d06f2bd6e51e61c40bea19d587e716fe22af0aa25effb87be80c88840dab`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The comparison stopped during pool allocation with the intended fail-closed guard:
+`backend=triton page_size=128, expected=1`. No request ran and no reader claim is made. Raw evidence
+is in `artifacts/e7-quality-triton-c8-61d2175/`.
+
+### Stage 5A.15 pre-registration — backend-native Triton/page-1 reference
+
+- **Linked changed factors:** FA4/page 128 to Triton/page 1, because each backend's FP4 reader has a
+  different mandatory page size. This is a diagnostic reference with an acknowledged page-layout
+  confound, not a one-factor adoption experiment.
+- **Held fixed:** the same `FP4MXBlock16KVQuantizeUtil` writer, native raw-storage class, spec-off,
+  CDS2, normal asynchronous CUDA, C8, prompts, item order, and all quality inputs.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass boot, T4, and at least five
+  new C8 batches without error.
+- **Kill/adoption rule:** a reproduced illegal access implicates the common writer/storage path. A
+  pass narrows the fault to FA4/page-128 interaction but cannot distinguish reader from layout.
