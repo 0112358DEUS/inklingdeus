@@ -627,3 +627,33 @@ in `artifacts/e7-tool-cds1-89c1ad5/`.
   duplicates, DSpark is ruled out and the next rung must capture and compare the model's raw
   canonical token stream, rendered forced-tool template, and parser result without client-side
   deduplication.
+
+### Stage 5A.6 result — speculation ruled out
+
+Exact commit `accdd145b96ee768c5f4ca5007da23044b5bb0b9`, runnable payload
+`155ef5a344503aa54514a5ace7554190a01f306b52d9a45bdea93c7101c5b74c`, and unchanged image payload
+`3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+Spec-off allocated 1,450,240 full-layer tokens, 193,256 above the gate; captured all target decode
+graphs through C16; and passed T4 before and after the tool suite.
+
+All 16 tool flows still emitted exactly two otherwise-valid identical calls. Speculation is
+therefore ruled out. Both containers stopped. Raw evidence is in
+`artifacts/e7-tool-specoff-accdd14/`.
+
+Source inspection identified a separate request/cardinality confounder. The OpenAI protocol model
+defaults `parallel_tool_calls` to true, and the benchmark did not override it despite requiring
+exactly one action. SGLang forwards the flag to `FunctionCallParser.get_structure_constraint`, but
+the legacy structural-tag fallback builds only an `at_least_one` constraint and does not visibly
+encode the false cardinality.
+
+### Stage 5A.7 pre-registration — explicit single-call protocol isolation
+
+- **Hypothesis:** duplicate calls are permitted by the benchmark's omitted OpenAI cardinality flag,
+  or expose a server bug where the legacy Inkling structural tag ignores that flag.
+- **Only changed factor:** add `parallel_tool_calls=false` to both requests in every tool flow. The
+  frozen spec-off/CDS1 server, image, prompts, forced choice, repetitions, context, graph, memory,
+  transport, and all other request fields remain unchanged.
+- **Gate:** the same identity, capacity, C1-C16 graph, bracketed T4, and 16/16 complete-flow gate.
+- **Kill/adoption rule:** a pass fixes the benchmark contract and proceeds to DSpark validation with
+  the same explicit flag. A duplicate proves the server is not enforcing the OpenAI single-call
+  contract; fix that integration upstream-style, never by response deduplication.

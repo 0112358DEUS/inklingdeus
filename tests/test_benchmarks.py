@@ -532,6 +532,24 @@ class NIAHEvalTests(unittest.TestCase):
 
 
 class ToolCallRegressionTests(unittest.TestCase):
+    def test_requests_single_call_cardinality(self):
+        response = io.BytesIO(b"{}")
+        with mock.patch.object(
+            tool_call_regression.urllib.request,
+            "urlopen",
+            return_value=response,
+        ) as urlopen:
+            tool_call_regression.post_chat(
+                url="http://example.invalid",
+                model="inkling-small",
+                messages=[{"role": "user", "content": "test"}],
+                tools=[],
+                tool_choice="none",
+                timeout=1,
+            )
+        body = json.loads(urlopen.call_args.args[0].data)
+        self.assertIs(body["parallel_tool_calls"], False)
+
     def test_detects_every_forbidden_parser_token(self):
         content = " ".join(tool_call_regression.FORBIDDEN_TOKENS)
         self.assertEqual(

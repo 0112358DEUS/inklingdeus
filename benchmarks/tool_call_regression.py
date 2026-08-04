@@ -110,6 +110,7 @@ def post_chat(
         "temperature": 0,
         "stream": False,
         "reasoning_effort": "none",
+        "parallel_tool_calls": False,
     }
     request = urllib.request.Request(
         f"{url}/v1/chat/completions",
