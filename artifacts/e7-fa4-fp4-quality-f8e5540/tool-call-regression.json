@@ -1,0 +1,571 @@
+{
+  "schema_version": 1,
+  "plan": {
+    "cases": [
+      "get_weather",
+      "convert_currency",
+      "lookup_inventory",
+      "get_calendar_event"
+    ],
+    "repetitions_per_case": 4,
+    "responses": 32,
+    "post_tool_turns": 16,
+    "endpoint": "/v1/chat/completions",
+    "forbidden_tokens": [
+      "<|end_message|>",
+      "<|content_model_end_sampling|>",
+      "<|content_invoke_tool_json|>",
+      "<|message_model|>"
+    ]
+  },
+  "model": "inkling-small",
+  "flows": 16,
+  "passed_flows": 0,
+  "all_passed": false,
+  "results": [
+    {
+      "case": "get_weather",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_f3178bace2d2424eb3948671",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_c1add9e787a1476cb3aa613a",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_a33f677b34b048f688a60091",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_81689aed88ac46bfafac1cff",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_34a8c716c08f4b31b33b0641",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_97f91e8af1574918a3e6e010",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_c8440ae9356047b1a59b5435",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_2a4ea04285b5458789f7fb54",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_weather",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_c21b5795e48f47dbabbf4edf",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_1bb1127cb4a340b18eb8df2b",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_6b9b609a70ca475aa54508c6",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_2b66d2b7fe7a403c96d1294e",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_8ef4cbc84650400bb82a58fd",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_598ad10e17bc4e2a9889e567",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_b36e478736054ae997327427",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_9fede7a5050e4a48a8847fe6",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_weather",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_d2ddebf7b4694ff089d58732",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_053254a9b6d04731ab6cc1a5",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_9c0222b138934816b1b4e8eb",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_857e150cf3b347368a05f7d9",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_67de5b2f8b5743ff89fe5f13",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_b89539fc96924b008f2837ab",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_488431afe1dd41eea8b20d70",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_8da2c9011179470eb869764b",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_weather",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_2cdb1db80339476699ad163f",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_872957863fd448ce9daeb6fc",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_7e428d81555b4b5ca27355dd",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_0b97816733ef4e9d984462a1",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_3fff2034f207404888fdf37e",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_e9596473855145dcb9c6f706",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_eea4aad8b9344e8eab91e55e",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_4100da1569454b1bb7ab54b1",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_message": null
+    }
+  ]
+}

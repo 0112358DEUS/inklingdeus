@@ -171,7 +171,9 @@ def run_flow(
             "repetition": repetition,
             "passed": False,
             "failures": failures,
+            "tool_response": first,
             "tool_message": first_message,
+            "post_tool_response": None,
             "post_tool_message": None,
         }
 
@@ -214,7 +216,9 @@ def run_flow(
         "repetition": repetition,
         "passed": not failures,
         "failures": failures,
+        "tool_response": first,
         "tool_message": first_message,
+        "post_tool_response": second,
         "post_tool_message": second_message,
     }
 

@@ -565,3 +565,38 @@ The next exact retry adds atomic per-case checkpointing and explicit resume. Res
 only when schema, model, full plan, and completed case-order prefix match exactly. Prompts, token
 calibration, depths, context targets, generation settings, correctness rule, model image, and all
 serving flags are unchanged.
+
+### Stage 5A.4 result — 512K/1M NIAH pass, duplicate tool calls stop quality
+
+Exact commit `f8e5540ad1fd68fad30a011f86e3929e1e96aa8b`, runnable payload
+`88ea26dc61016b5be7bb0059658d69b0d6a9a2cc813186274c6c54520d058639`, and full image payload
+`3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+The server allocated 1,325,312 full-layer tokens, 68,328 above the gate; captured all target/draft
+tiers through C16; passed the live tokenizer contract; and passed T4 before quality.
+
+NIAH then passed all six durable cases. The measured 512K prompts were 511,984/512,026/511,973
+tokens at 10/50/90% depth and completed in 1,882.6/1,875.6/1,876.4 seconds. The measured 1M
+prompts were 999,987/1,000,020/999,952 tokens and completed in 6,649.0/6,655.1/6,646.0 seconds.
+Every answer contained its exact unique secret; the atomic checkpoint is `complete=true`, 6/6,
+and `all_passed=true`. Post-NIAH T4 also passed.
+
+The next gate failed 0/16 tool flows. Every response selected the correct forced tool and emitted
+valid required arguments, but it emitted the same call twice with distinct generated call IDs.
+The harness correctly rejected those as two external actions; it did not execute any tool. GSM8K
+did not start, and both containers stopped. Raw evidence is in
+`artifacts/e7-fa4-fp4-quality-f8e5540/`.
+
+### Stage 5A.5 pre-registration — continuous-decode tool-stop isolation
+
+- **Hypothesis:** E8's accepted `--num-continuous-decode-steps 2` text-speed optimization crosses
+  Inkling's structured `END_MESSAGE` boundary and permits a second call. E8 tested T4 and text
+  workloads, not structured tools.
+- **Only changed factor:** continuous decode steps 2 to 1. Image, FA4 reader, native FP4 KV,
+  DSpark block 5, page 128, 1M context, memory fraction, graph tiers, max requests, MoE/GEMM,
+  transport, tool prompts, forced-choice objects, and four repetitions remain unchanged.
+- **Gate:** exact identities, capacity >=1,256,984, all graphs, pre/post T4, and 16/16 complete tool
+  flows including post-tool turns. Full raw OpenAI responses are retained in the candidate artifact.
+- **Kill/adoption rule:** any duplicate, wrong call, malformed arguments, parser-token leak, empty
+  post-tool answer, extra post-tool call, or T4 failure rejects CDS1. A pass identifies the stop
+  boundary but does not silently change the champion; its known text throughput cost must be
+  measured or the compiled scheduler stop logic fixed before final adoption.
