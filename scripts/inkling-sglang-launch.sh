@@ -89,6 +89,13 @@ case "${INKLING_SHEARED_BIAS:-}" in
   *) echo "ERROR: INKLING_SHEARED_BIAS must be unset, 0, or 1" >&2; exit 2 ;;
 esac
 
+CUDA_DEBUG_ENV=()
+case "${CUDA_LAUNCH_BLOCKING:-}" in
+  '') ;;
+  0|1) CUDA_DEBUG_ENV+=(-e CUDA_LAUNCH_BLOCKING="$CUDA_LAUNCH_BLOCKING") ;;
+  *) echo "ERROR: CUDA_LAUNCH_BLOCKING must be 0, 1, or unset" >&2; exit 2 ;;
+esac
+
 # E8 opt-in: NCCL collective tuning for the per-decode-step TP2 all-reduce. Injected only when
 # set, so the default launch keeps NCCL's own protocol/algorithm selection (the measured champion).
 NCCL_TUNE_ENV=()
@@ -152,6 +159,7 @@ DOCKER_CMD=(
   -e SGLANG_ENABLE_UNIFIED_RADIX_TREE=1
   ${RAGGED_ENV[@]+"${RAGGED_ENV[@]}"}
   ${INKLING_BIAS_ENV[@]+"${INKLING_BIAS_ENV[@]}"}
+  ${CUDA_DEBUG_ENV[@]+"${CUDA_DEBUG_ENV[@]}"}
   -e NCCL_IB_HCA="$HCA" -e NCCL_IB_GID_INDEX="$GID"
   -e NCCL_SOCKET_IFNAME="$IF" -e GLOO_SOCKET_IFNAME="$IF" -e TP_SOCKET_IFNAME="$IF"
   -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none

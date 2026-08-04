@@ -763,3 +763,30 @@ the production champion remains untouched.
   benchmark errors.
 - **Kill/adoption rule:** any resume mismatch, tool/T4 regression, benchmark error, or GSM8K score
   below threshold stops quality. Preserve all raw responses and both node logs.
+
+### Stage 5A.11 result — GSM8K runtime crash after 40 durable items
+
+Exact commit `258ea9d5c8fe98976e3bd60135b999a35f0b742c`, runnable payload
+`9f846e86b9df37669243bffb2ced7ffc50ab7b7d84c4d0979521f370318188d7`, and image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The stack allocated 1,338,240 full-layer tokens; passed all graph, tokenizer, NIAH-resume, tool, and
+bracketed-T4 gates; then began official GSM8K at C8. The first 40 items are durable with 97.50%
+running accuracy. At the next batch, rank 0 hit a CUDA illegal memory access and all eight in-flight
+requests returned HTTP 500. The run correctly stopped and both containers exited. Raw evidence is
+in `artifacts/e7-quality-resume-258ea9d/`.
+
+The synchronous Python stack points at compiled FP4 KV quantization during target prefill, but CUDA
+may report an earlier asynchronous fault there. Rank 1 shows only the resulting NCCL watchdog
+failure. Standalone 100-iteration contiguous and stride-2 quantizer loops both passed with a device
+synchronize after every call, so no quantizer fix is adopted from the asynchronous stack alone.
+
+### Stage 5A.12 pre-registration — synchronous crash attribution
+
+- **Only changed factor:** set `CUDA_LAUNCH_BLOCKING=1` inside both rank containers. Repository,
+  image, final DSpark/CDS2 runtime, C8, prompts, item order, and all benchmark settings stay fixed.
+- **Resume:** reuse the exact NIAH checkpoint and 40 checksum-bound GSM8K records. The benchmark's
+  resume validator must accept both and begin at item 40.
+- **Gate:** reproduce or pass at least the next five C8 batches. A synchronous traceback must name
+  the actual failing launch before any code fix is proposed.
+- **Kill/adoption rule:** diagnostic mode cannot be adopted or used for final performance. Preserve
+  all logs and newly completed records; do not lower concurrency.
