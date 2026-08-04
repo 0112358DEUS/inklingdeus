@@ -710,3 +710,28 @@ occur, so this candidate is rejected. Raw evidence is in `artifacts/e7-tool-fix-
   responses.
 - **Kill/adoption rule:** reject on any call, post-tool, or T4 failure. A pass must be repeated with
   DSpark block 5 before quality resumes.
+
+### Stage 5A.9 result — exact-one path passes spec-off
+
+Exact commit `ff2dc464c41769f643ef296f8c6bff07c734ef09`, runnable payload
+`1e1d67e3967d05825a1bf2883671ef6600bfcba79347d45de14ef55883c2e71b`, and patched image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The image import gate proved `kind=json_schema` and `minItems=maxItems=1`. The live stack allocated
+1,500,160 full-layer tokens, 243,176 above the gate; captured all C1-C16 target graphs; and passed
+T4 before and after the tool suite.
+
+All 16 flows passed. Every initial turn contained exactly one requested call with valid arguments;
+every post-tool turn had nonempty text and zero tool calls; no parser token leaked. Raw evidence is
+in `artifacts/e7-tool-json1-ff2dc46/`.
+
+### Stage 5A.10 pre-registration — final DSpark/CDS2 tool confirmation
+
+- **Purpose:** confirm the accepted protocol fix on the intended high-performance runtime rather
+  than adopt from an isolation stack.
+- **Changed factors from isolation:** restore the already validated E8 winner settings, DSpark block
+  5 and continuous decode steps 2. Image, exact-one request, FA4/FP4/page-128/1M runtime, graph tiers,
+  max requests, prompts, repetitions, transport, and all correctness rules remain unchanged.
+- **Gate:** exact identities, >=1,256,984 capacity, every target and draft C1-C16 graph, bracketed
+  T4, and 16/16 complete tool flows with full raw responses.
+- **Kill/adoption rule:** reject on any duplicate, malformed call, token leak, empty/extra post-tool
+  response, graph/capacity drift, or T4 failure. Only a full pass unblocks GSM8K.

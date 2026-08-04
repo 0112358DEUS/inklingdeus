@@ -11,16 +11,21 @@ MODELS=${MODELS:?set the identical model directory on both nodes}
 IMAGE=${IMAGE:-local/sglang-inkling:sparkflash-fp4-dev}
 GID=${GID:-3}
 SPEC=${SPEC:-1}
+CONTINUOUS_DECODE_STEPS=${CONTINUOUS_DECODE_STEPS:-1}
 RESULT_DIR=${RESULT_DIR:-artifacts/e7-tool-cds1}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
 MIN_FULL_TOKENS=${MIN_FULL_TOKENS:-1256984}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
 case "$SPEC" in
-  0) MODE_LABEL=specoff-cds1 ;;
-  1) MODE_LABEL=dspark-cds1 ;;
+  0) MODE_LABEL=specoff ;;
+  1) MODE_LABEL=dspark ;;
   *) echo "SPEC must be 0 or 1" >&2; exit 2 ;;
 esac
+case "$CONTINUOUS_DECODE_STEPS" in
+  *[!0-9]*|0|'') echo "CONTINUOUS_DECODE_STEPS must be a positive integer" >&2; exit 2 ;;
+esac
+MODE_LABEL="$MODE_LABEL-cds$CONTINUOUS_DECODE_STEPS"
 
 case "$RESULT_DIR" in
   /*|*..*) echo "RESULT_DIR must be a safe relative path" >&2; exit 2 ;;
@@ -130,13 +135,14 @@ PY
 start_server() {
   stop_arm
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/tool-cds1-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 SPEC=$(printf '%q' "$SPEC") BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=1 EXTRA_ARGS=$(printf '%q' '--kv-cache-dtype fp4_mx_block16') ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/tool-cds1-worker.log") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 SPEC=$(printf '%q' "$SPEC") BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=$(printf '%q' "$CONTINUOUS_DECODE_STEPS") EXTRA_ARGS=$(printf '%q' '--kv-cache-dtype fp4_mx_block16') ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/tool-cds1-head.log" \
     ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 \
     SPEC="$SPEC" BLOCK=5 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
-    INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=1 \
+    INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 \
+    CONTINUOUS_DECODE_STEPS="$CONTINUOUS_DECODE_STEPS" \
     EXTRA_ARGS="--kv-cache-dtype fp4_mx_block16" \
     "$REPO_DIR/scripts/inkling-sglang-launch.sh" 0 </dev/null >/dev/null 2>&1 &
 }
@@ -145,7 +151,8 @@ verify_runtime() {
   docker inspect inkling-sglang >"$RESULT_DIR/tool-cds1-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/tool-cds1-worker-inspect.json"
-  python3 - "$IMAGE" "$MIN_FULL_TOKENS" "$SPEC" "$RESULT_DIR/tool-cds1-head.log" \
+  python3 - "$IMAGE" "$MIN_FULL_TOKENS" "$SPEC" "$CONTINUOUS_DECODE_STEPS" \
+    "$RESULT_DIR/tool-cds1-head.log" \
     "$RESULT_DIR/tool-cds1-head-inspect.json" "$RESULT_DIR/tool-cds1-worker-inspect.json" <<'PY' \
     | tee "$RESULT_DIR/runtime-contract.txt"
 import json
@@ -156,7 +163,8 @@ from pathlib import Path
 image = sys.argv[1]
 minimum = int(sys.argv[2])
 spec = int(sys.argv[3])
-log_path = Path(sys.argv[4])
+continuous_decode_steps = sys.argv[4]
+log_path = Path(sys.argv[5])
 text = log_path.read_text(encoding="utf-8", errors="replace")
 match = re.search(
     r"Use sliding window memory pool\. full_layer_tokens=(\d+), swa_layer_tokens=(\d+)",
@@ -172,7 +180,7 @@ required = {
     "--page-size": "128",
     "--context-length": "1048576",
     "--kv-cache-dtype": "fp4_mx_block16",
-    "--num-continuous-decode-steps": "1",
+    "--num-continuous-decode-steps": continuous_decode_steps,
     "--max-running-requests": "16",
 }
 spec_required = {
@@ -181,7 +189,7 @@ spec_required = {
     "--speculative-draft-model-quantization": "unquant",
     "--speculative-dspark-block-size": "5",
 }
-for path_text in sys.argv[5:]:
+for path_text in sys.argv[6:]:
     payload = json.loads(Path(path_text).read_text(encoding="utf-8"))[0]
     if payload["Config"]["Image"] != image:
         raise SystemExit(f"{path_text}: wrong image")
@@ -210,7 +218,8 @@ for proof in proofs:
     if proof not in text:
         raise SystemExit(f"missing runtime proof {proof!r}")
 print(
-    f"CDS1 RUNTIME PASS spec={'dspark' if spec else 'off'} full_layer_tokens={full} "
+    f"TOOL RUNTIME PASS spec={'dspark' if spec else 'off'} "
+    f"continuous_decode_steps={continuous_decode_steps} full_layer_tokens={full} "
     f"headroom={full - minimum} swa_layer_tokens={swa}"
 )
 PY
