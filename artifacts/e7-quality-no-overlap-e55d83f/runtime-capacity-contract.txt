@@ -1,0 +1,1 @@
+FP4 1M RUNTIME PASS attention=fa4 page=128 full_layer_tokens=1296000 headroom=39016 swa_layer_tokens=129536 spec=dspark block=5 overlap=off graphs=C16

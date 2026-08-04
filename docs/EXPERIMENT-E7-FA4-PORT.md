@@ -932,3 +932,26 @@ compiled quantizer is exonerated as the origin. Raw evidence is in
 - **Kill/adoption rule:** a failure rules overlap scheduling out. A pass is a correctness candidate
   only; measure latency/throughput cost and then replace global de-overlap with the smallest correct
   stream/event dependency if possible.
+
+### Stage 5A.17 result — overlap scheduling is exonerated
+
+Exact commit `e55d83f45c9dd642444564b228fbaef1f6572512`, runnable payload
+`e50856a5eda80a77fb1d84ec05e5587f31fc6f6ebaf027213a8be09549f78872`, and image payload
+`22afed476160789d46a34e0da5cec127b60e4d90a0af2eff3cb8f8694b9c775b` matched across controls.
+The no-overlap candidate allocated 1,296,000 full-layer tokens, captured every target/draft graph,
+passed tokenizer, T4, NIAH resume, and 16/16 tools. It then crashed on the first resumed C8 batch at
+item 128 on both ranks. The visible reporting point was again a BF16 CUBLAS GEMM followed by the
+illegal-address watchdog failure. Global overlap scheduling is rejected as the root cause. Raw
+evidence is in `artifacts/e7-quality-no-overlap-e55d83f/`.
+
+### Stage 5A.18 pre-registration — decode CUDA-graph isolation
+
+- **Hypothesis:** one of the target/draft decode graph captures or replays retains a stale FP4 KV
+  pointer or shape. Launch blocking masks the illegal write, while changing the writer and scheduler
+  only changes its later reporting point.
+- **Only changed factor:** disable CUDA graphs. Restore overlap scheduling and keep the original
+  compiled writer, FA4/page 128, DSpark block 5, CDS2, 1M context, C8, and all quality inputs fixed.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
+  bracketed T4, 16/16 tools, and at least five new C8 batches without error.
+- **Kill/adoption rule:** any error rejects the hypothesis. A pass is diagnostic only because graph-off
+  performance cannot be adopted without measuring the target throughput gates.
