@@ -1,0 +1,127 @@
+{
+  "schema_version": 2,
+  "plan": {
+    "targets": [
+      512000,
+      1000000
+    ],
+    "depths": [
+      0.1,
+      0.5,
+      0.9
+    ],
+    "cases": 6,
+    "endpoint": "/v1/chat/completions",
+    "tokenizer_endpoint": "/v1/tokenize",
+    "reasoning_effort": "none",
+    "max_tokens": 64
+  },
+  "model": "inkling-small",
+  "complete": true,
+  "completed_cases": 6,
+  "all_passed": true,
+  "by_target": {
+    "512000": {
+      "n": 3,
+      "completed": 3,
+      "passed": 3
+    },
+    "1000000": {
+      "n": 3,
+      "completed": 3,
+      "passed": 3
+    }
+  },
+  "results": [
+    {
+      "target_tokens": 512000,
+      "measured_prompt_tokens": 511984,
+      "tolerance_tokens": 512,
+      "depth": 0.1,
+      "record_count": 13933,
+      "needle_record_index": 1393,
+      "secret": "QZV-85FFB6FC-KAPPA",
+      "passed": true,
+      "content": "QZV-85FFB6FC-KAPPA",
+      "reasoning_content": null,
+      "elapsed_seconds": 1882.5833942099998,
+      "completion_tokens": 16,
+      "seed": 0
+    },
+    {
+      "target_tokens": 512000,
+      "measured_prompt_tokens": 512026,
+      "tolerance_tokens": 512,
+      "depth": 0.5,
+      "record_count": 13943,
+      "needle_record_index": 6972,
+      "secret": "QZV-BE549F4E-KAPPA",
+      "passed": true,
+      "content": "QZV-BE549F4E-KAPPA",
+      "reasoning_content": null,
+      "elapsed_seconds": 1875.555720481003,
+      "completion_tokens": 16,
+      "seed": 1
+    },
+    {
+      "target_tokens": 512000,
+      "measured_prompt_tokens": 511973,
+      "tolerance_tokens": 512,
+      "depth": 0.9,
+      "record_count": 13942,
+      "needle_record_index": 12548,
+      "secret": "QZV-D7A4B9BA-KAPPA",
+      "passed": true,
+      "content": "QZV-D7A4B9BA-KAPPA",
+      "reasoning_content": null,
+      "elapsed_seconds": 1876.4442358909873,
+      "completion_tokens": 17,
+      "seed": 2
+    },
+    {
+      "target_tokens": 1000000,
+      "measured_prompt_tokens": 999987,
+      "tolerance_tokens": 1000,
+      "depth": 0.1,
+      "record_count": 27225,
+      "needle_record_index": 2722,
+      "secret": "QZV-D1CBC6C4-KAPPA",
+      "passed": true,
+      "content": "QZV-D1CBC6C4-KAPPA",
+      "reasoning_content": null,
+      "elapsed_seconds": 6649.026024452003,
+      "completion_tokens": 16,
+      "seed": 0
+    },
+    {
+      "target_tokens": 1000000,
+      "measured_prompt_tokens": 1000020,
+      "tolerance_tokens": 1000,
+      "depth": 0.5,
+      "record_count": 27228,
+      "needle_record_index": 13614,
+      "secret": "QZV-EF9972A9-KAPPA",
+      "passed": true,
+      "content": "QZV-EF9972A9-KAPPA",
+      "reasoning_content": null,
+      "elapsed_seconds": 6655.064550213981,
+      "completion_tokens": 16,
+      "seed": 1
+    },
+    {
+      "target_tokens": 1000000,
+      "measured_prompt_tokens": 999952,
+      "tolerance_tokens": 1000,
+      "depth": 0.9,
+      "record_count": 27234,
+      "needle_record_index": 24511,
+      "secret": "QZV-D61AA319-KAPPA",
+      "passed": true,
+      "content": "QZV-D61AA319-KAPPA",
+      "reasoning_content": null,
+      "elapsed_seconds": 6645.951468872023,
+      "completion_tokens": 14,
+      "seed": 2
+    }
+  ]
+}

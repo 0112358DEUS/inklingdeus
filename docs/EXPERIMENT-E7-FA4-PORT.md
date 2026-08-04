@@ -886,3 +886,24 @@ cannot clear the common FP4 writer. Raw evidence is in `artifacts/e7-quality-tri
   all graphs, T4, 16/16 tools, and at least five new normal-asynchronous C8 batches without error.
 - **Kill/adoption rule:** any error rejects eager quantization. A pass is a stability candidate only;
   it must undergo final full GSM8K and performance comparison before adoption.
+
+### Stage 5A.16 result — eager store blocked by bounds constant during graph capture
+
+Exact commit `e69c9a8e01a19f25f11f42d3b5a6d041935c7f29`, runnable payload
+`89900295cb5dd32f05db58c1ea1973826f175e6a396ae3014e049d2c83fa7367`, and eager image payload
+`2ccd7aec7fd1d5b3bce484f565fc6a54c59ca05e5b9ab0c6fee390cdc59c5876` matched across controls.
+The image GPU gate passed, but target graph capture stopped before serving: eager
+`tensor.new_tensor(E2M1_BOUNDS)` attempted a CPU-to-GPU copy inside capture. No request ran and no
+stability claim is made. The observed 1,223,808-token allocation was also below the capacity gate,
+so a retry must independently clear capacity. Raw evidence is in
+`artifacts/e7-quality-eager-fp4-e69c9a8/`.
+
+### Stage 5A.16.1 pre-registration — graph-safe eager thresholds
+
+- **Only implementation delta:** replace the bounds tensor construction and vector comparison with
+  seven scalar threshold comparisons summed on-device. Threshold values and E2M1 magnitude mapping
+  remain byte-for-byte equivalent; quantization remains eager.
+- **Held fixed:** final FA4/page-128/FP4/DSpark-block-5/CDS2/1M/C8 stack and all quality inputs.
+- **Gate:** image GPU test, >=1,256,984 capacity, every target/draft C1-C16 graph, bracketed T4,
+  16/16 tools, and at least five new asynchronous C8 batches from the 128-item checkpoint.
+- **Kill/adoption rule:** any capacity, graph, correctness, or runtime error rejects the candidate.

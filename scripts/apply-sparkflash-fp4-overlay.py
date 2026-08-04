@@ -297,6 +297,18 @@ def main() -> int:
     def batched_quantize(tensor: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
 """,
     )
+    replace_exact(
+        kvfp4_tensor,
+        """        bounds = tensor.new_tensor(E2M1_BOUNDS, dtype=torch.float32)
+        magnitude_bits = torch.sum(abs_vals.unsqueeze(-1) >= bounds, dim=-1)
+""",
+        """        # Scalar comparisons preserve the exact seven E2M1 thresholds
+        # without a CPU-to-GPU constant copy during CUDA graph capture.
+        magnitude_bits = sum(
+            (abs_vals >= bound).to(torch.uint8) for bound in E2M1_BOUNDS
+        )
+""",
+    )
 
     print("SPARKFLASH FP4 SGLANG OVERLAY PASS")
     return 0
