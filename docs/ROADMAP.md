@@ -13,6 +13,77 @@ upstream-quality SM121 FA4+native-FP4-KV contribution, a native-MTP or true comp
 breakthrough, real chat >=40 tok/s, C8 >=100 tok/s, acceptance >=3.2 (or draft-free native MTP),
 and measured >=1.5x champion tokens/joule.
 
+## Queued successor campaign — SparkFlash-X
+
+**State: QUEUED, not yet active.** SparkFlash-X begins only after SparkFlash-1M v1.0 has a tagged,
+released champion. Its baseline tuple — tok/s, acceptance, usable pool, J/token, and C8 — must be
+read from that release and reproduced under the same harness; roadmap prose and remembered numbers
+are never baseline authority. The loop remains plan -> implement -> measure -> adopt/reject ->
+commit -> PR -> merge until VICTORY or EXHAUSTION.
+
+### Phase 0 — inheritance audit (mandatory, one iteration)
+
+1. Start from a fresh clone and reproduce every v1.0 headline number on the then-current hardware
+   and firmware. A result outside one combined standard error becomes the campaign's first bug.
+2. If v1.0 terminates in EXHAUSTION, import its ranked "next experiment" list. Close or explicitly
+   re-park every item before opening frontier work.
+3. Record the release tag, exact SHAs, image payloads, firmware, harness plan identities, raw samples,
+   and derived baseline tuple in this file before measuring any frontier candidate.
+
+Inherited invariants remain unchanged: I1 numerical integrity (byte-exact within one numerics config;
+logprob parity plus GSM8K across kernel changes), usable pool never below v1.0, open-ended n=32
+one-variable same-session A/B, no gate edits alongside performance claims, explicit PENDING-HW
+status, and known-fatal settings remaining dead.
+
+### Tier 1 — frontier baseline (all required)
+
+- **F1 single stream:** >=25% open-ended n=32 tok/s over the reproduced v1.0 champion.
+- **F2 prefill:** publish TTFT p50/p99 at 1K, 32K, 256K, and 1M; reduce p99 TTFT@32K by >=30%.
+- **F3 concurrency:** improve C8 aggregate by >=30% over v1.0's curve, keep C16 stable, and publish
+  p99 inter-token latency.
+- **F4 quality:** every adoption retains NIAH@1M, GSM8K >=94.83%, and the tool-call wall.
+- **F5 regression wall:** expose all inherited v1.0 gates as one documented per-adoption command;
+  no frontier change may land without its complete result.
+
+### Tier 2 — frontier stretch (any two)
+
+- **X1 context 2M:** audit RoPE and draft caps, prove pool accounting, and pass NIAH@2M at three
+  depths. The claim requires a declared 2M recipe on desktop hardware, not projected capacity.
+- **X2 KV beyond FP4:** exploit Inkling's 35/42 SWA-512 layers by compressing or evicting only the
+  seven global-layer caches (H2O/SnapKV-class scoring, or 2–3 bit with outlier channels). Target
+  >=1.5x effective pool or 2M context while retaining NIAH@1M and GSM8K within 0.5 point.
+- **X3 speculation architecture:** price and test tree/top-k>1 verification, cheap STS-driven dynamic
+  gamma without the rejected cap-accept layout, or weekly-arm online draft LoRA distillation. Target
+  +0.5 acceptance over v1.0 on open-ended traffic.
+- **X4 fused-step engineering:** use the v1.0 cost map to fuse its largest eligible item — native FP4
+  KV dequant in the attention load, draft forward in the decode graph, sconv commit with verify, or
+  asynchronous TP all-reduce with MoE compute. One end-to-end proven fusion is a win.
+- **X5 scale-out 4x:** with four Sparks, test DP2 routing across two TP2 pairs or prefill/decode
+  disaggregation. Require >=3.4x single-pair aggregate at C16 and no worse per-request latency than
+  one pair at C8. Otherwise record **PENDING-HW** without proxy claims.
+
+### Tier 3 — moonshot and publication
+
+Compound X1+X2 into a verified 2M-context desktop stack sustaining >=100 tok/s aggregate at C8, then
+release SparkFlash-X v2.0 with a reproducibility paper: methods, all null results, energy curve,
+v1.0 comparison, and upstream-official comparison cells. The paper and raw reproduction package are
+part of the deliverable, not follow-up work.
+
+### Frontier operating rules
+
+- **N1 price first:** profile every lever and record an Amdahl ceiling before implementation. Skip
+  any lever whose predicted end-to-end ceiling is below 3%.
+- **N2 reference before serve:** every custom kernel gets bitwise/tolerance tests against a reference
+  implementation before its first server launch, following `tests_verify_nvfp4.py`.
+- **N3 gate quality-changing numerics:** eviction, lossy compression, or stochastic/tree verification
+  must add a dedicated quality check to F5 in the same PR.
+- **N4 upstream first:** file every adopted generally applicable kernel or fix upstream within one
+  iteration; enumerate any private patch as technical debt.
+
+SparkFlash-X reaches **EXHAUSTION** after six consecutive iterations with no adoption, no newly
+localized wall, and no new ceiling-pricing insight. Its terminal report must quantify the remaining
+distance to every target and rank the handoff backlog.
+
 ## Active north-star loop — control1/control2
 
 The north-star loop resumed from current `main` on 2026-08-03. Completed rows are immutable:
