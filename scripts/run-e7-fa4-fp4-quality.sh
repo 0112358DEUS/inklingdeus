@@ -11,11 +11,17 @@ MODELS=${MODELS:?set the identical model directory on both nodes}
 GSM8K_DATA=${GSM8K_DATA:?set the checksum-pinned GSM8K test JSONL path}
 IMAGE=${IMAGE:-local/sglang-inkling:sparkflash-fp4-dev}
 GID=${GID:-3}
+SPEC=${SPEC:-1}
 RESULT_DIR=${RESULT_DIR:-artifacts/e7-fa4-fp4-quality}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
 MIN_FULL_TOKENS=${MIN_FULL_TOKENS:-1256984}
 GSM_CONCURRENCY=${GSM_CONCURRENCY:-8}
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
+
+case "$SPEC" in
+  0|1) ;;
+  *) echo "SPEC must be 0 or 1" >&2; exit 2 ;;
+esac
 
 case "$RESULT_DIR" in
   /*|*..*) echo "RESULT_DIR must be a safe relative path" >&2; exit 2 ;;
@@ -144,12 +150,12 @@ PY
 start_server() {
   stop_arm
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/quality-worker.log") CUDA_LAUNCH_BLOCKING=$(printf '%q' "${CUDA_LAUNCH_BLOCKING:-}") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 SPEC=1 BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' '--kv-cache-dtype fp4_mx_block16') ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/quality-worker.log") CUDA_LAUNCH_BLOCKING=$(printf '%q' "${CUDA_LAUNCH_BLOCKING:-}") ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 SPEC=$(printf '%q' "$SPEC") BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' '--kv-cache-dtype fp4_mx_block16') ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/quality-head.log" \
     ATTN=fa4 MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 \
-    SPEC=1 BLOCK=5 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
+    SPEC="$SPEC" BLOCK=5 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
     INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=128 CONTINUOUS_DECODE_STEPS=2 \
     EXTRA_ARGS="--kv-cache-dtype fp4_mx_block16" \
     "$REPO_DIR/scripts/inkling-sglang-launch.sh" 0 </dev/null >/dev/null 2>&1 &
@@ -159,7 +165,7 @@ verify_runtime_and_capacity() {
   docker inspect inkling-sglang >"$RESULT_DIR/quality-head-inspect.json"
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/quality-worker-inspect.json"
-  python3 - "$IMAGE" "$MIN_FULL_TOKENS" "$RESULT_DIR/quality-head.log" \
+  python3 - "$IMAGE" "$MIN_FULL_TOKENS" "$SPEC" "$RESULT_DIR/quality-head.log" \
     "$RESULT_DIR/quality-head-inspect.json" "$RESULT_DIR/quality-worker-inspect.json" <<'PY' \
     | tee "$RESULT_DIR/runtime-capacity-contract.txt"
 import json
@@ -169,7 +175,8 @@ from pathlib import Path
 
 image = sys.argv[1]
 minimum = int(sys.argv[2])
-log_path = Path(sys.argv[3])
+spec = int(sys.argv[3])
+log_path = Path(sys.argv[4])
 text = log_path.read_text(encoding="utf-8", errors="replace")
 match = re.search(
     r"Use sliding window memory pool\. full_layer_tokens=(\d+), "
@@ -186,13 +193,17 @@ required = {
     "--page-size": "128",
     "--context-length": "1048576",
     "--kv-cache-dtype": "fp4_mx_block16",
-    "--speculative-algorithm": "DSPARK",
-    "--speculative-dspark-block-size": "5",
     "--max-running-requests": "16",
     "--moe-runner-backend": "marlin",
     "--fp4-gemm-backend": "flashinfer_trtllm",
 }
-for path_text in sys.argv[4:]:
+spec_required = {
+    "--speculative-algorithm": "DSPARK",
+    "--speculative-draft-model-path": "/models/dspark-draft",
+    "--speculative-draft-model-quantization": "unquant",
+    "--speculative-dspark-block-size": "5",
+}
+for path_text in sys.argv[5:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     if payload["Config"]["Image"] != image:
@@ -201,19 +212,33 @@ for path_text in sys.argv[4:]:
     for flag, expected in required.items():
         if command.count(flag) != 1 or command[command.index(flag) + 1] != expected:
             raise SystemExit(f"{path}: {flag} contract failed")
+    if spec:
+        for flag, expected in spec_required.items():
+            if command.count(flag) != 1 or command[command.index(flag) + 1] != expected:
+                raise SystemExit(f"{path}: {flag} contract failed")
+    else:
+        present = set(spec_required).intersection(command)
+        if present:
+            raise SystemExit(f"{path}: forbidden spec-off flags: {sorted(present)}")
     if "SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0" not in set(payload["Config"]["Env"]):
         raise SystemExit(f"{path}: score-mod bias contract failed")
-for proof in (
-    "Initialized DSpark draft runner. attention_backend=fa4",
-    "DSpark draft greedy proposal folded into the draft cuda graph",
-    "Capture target verify CUDA graph end",
-    "Capture draft verify CUDA graph end",
-):
+proofs = (
+    (
+        "Initialized DSpark draft runner. attention_backend=fa4",
+        "DSpark draft greedy proposal folded into the draft cuda graph",
+        "Capture target verify CUDA graph end",
+        "Capture draft verify CUDA graph end",
+    )
+    if spec
+    else ("Capture target decode CUDA graph end",)
+)
+for proof in proofs:
     if proof not in text:
         raise SystemExit(f"{log_path}: missing {proof!r}")
 print(
     f"FA4 FP4 1M RUNTIME PASS full_layer_tokens={full} "
-    f"headroom={full - minimum} swa_layer_tokens={swa} block=5 graphs=C16"
+    f"headroom={full - minimum} swa_layer_tokens={swa} "
+    f"spec={'dspark' if spec else 'off'} block={5 if spec else 'none'} graphs=C16"
 )
 PY
 }

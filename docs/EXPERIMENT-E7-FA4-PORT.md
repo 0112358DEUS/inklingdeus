@@ -790,3 +790,28 @@ synchronize after every call, so no quantizer fix is adopted from the asynchrono
   the actual failing launch before any code fix is proposed.
 - **Kill/adoption rule:** diagnostic mode cannot be adopted or used for final performance. Preserve
   all logs and newly completed records; do not lower concurrency.
+
+### Stage 5A.12 result — synchronization masks, does not attribute
+
+Exact commit `172374f3f12ad710422977730f0479f283716c26`, runnable payload
+`1d399da27fce28c42e8551fbc8d1dd7723893713a1171f38a0167b7f17bc2c08`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+Launch-blocking mode passed all pre-quality gates and resumed at item 40. Six new C8 batches
+completed through item 88 with no illegal access; 84/88 answers are correct (95.45%). The bounded
+run was then intentionally stopped, causing only the expected rank-1 transport reset after rank 0
+exited. Raw evidence is in `artifacts/e7-quality-sync-172374f/`.
+
+Because synchronization changes scheduling and the fault did not reproduce, no kernel is cleared
+or blamed. This diagnostic result cannot count as a reliability or performance pass.
+
+### Stage 5A.13 pre-registration — DSpark isolation under asynchronous C8
+
+- **Only changed factor:** disable speculation while restoring normal asynchronous CUDA execution.
+  FA4, native FP4 KV, page 128, 1M context, CDS2, C8, prompts, item order, and all other runtime and
+  benchmark settings remain unchanged.
+- **Resume:** reuse the exact NIAH checkpoint and 88 checksum-bound GSM8K records; begin at item 88.
+- **Gate:** run at least five new C8 batches with no HTTP or benchmark error, preserving every
+  response and both logs.
+- **Kill/adoption rule:** a reproduced illegal access rules out DSpark. A five-batch pass implicates
+  but does not yet prove DSpark; the next rung must isolate its graph/state transitions. Spec-off is
+  diagnostic only and cannot satisfy the final performance stack.
