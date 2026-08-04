@@ -735,3 +735,31 @@ in `artifacts/e7-tool-json1-ff2dc46/`.
   T4, and 16/16 complete tool flows with full raw responses.
 - **Kill/adoption rule:** reject on any duplicate, malformed call, token leak, empty/extra post-tool
   response, graph/capacity drift, or T4 failure. Only a full pass unblocks GSM8K.
+
+### Stage 5A.10 result — final DSpark/CDS2 tool gate passes
+
+Exact commit `733dc1f71cf9d785eed3c3f757fb6b6b9110fa75`, runnable payload
+`a3fc903e20c67db526c3182ef0264a556244bd1aa1ab804429d7557d3cd4252f`, and exact-one image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The intended DSpark-block-5/CDS2 stack allocated 1,312,000 full-layer tokens, 55,016 above the gate;
+captured every target and draft C1-C16 graph; and passed T4 before and after the suite.
+
+All 16 complete flows passed again. Every initial turn contained exactly one valid requested call,
+every post-tool turn had nonempty content and no call, and no parser token leaked. Raw evidence is in
+`artifacts/e7-tool-final-733dc1f/`. The exact-one fix is adopted in the SparkFlash development lane;
+the production champion remains untouched.
+
+### Stage 5A.11 pre-registration — resume quality at GSM8K
+
+- **Prior invariant evidence:** exact `f8e5540` already passed all six 512K/1M NIAH cases and
+  bracketed T4. The accepted delta changes the benchmark's OpenAI cardinality field plus SGLang's
+  required/named tool-constraint routing; it does not change model execution, attention, KV,
+  tokenizer rendering, sampling, or NIAH code.
+- **Continuation:** seed the complete schema-v2 NIAH checkpoint into a fresh exact-run evidence
+  directory. The fail-closed resume validator must accept the identical model/plan and execute zero
+  NIAH cases, after which the current server reruns the 16-flow tool gate and full official GSM8K.
+- **Gate:** exact identities, capacity, all C1-C16 target/draft graphs, tokenizer contract, T4 before
+  quality and after NIAH, durable NIAH 6/6 unchanged, tools 16/16, and GSM8K >=94.83% with zero
+  benchmark errors.
+- **Kill/adoption rule:** any resume mismatch, tool/T4 regression, benchmark error, or GSM8K score
+  below threshold stops quality. Preserve all raw responses and both node logs.
