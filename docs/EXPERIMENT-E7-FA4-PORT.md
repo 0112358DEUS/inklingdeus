@@ -954,6 +954,10 @@ evidence is in `artifacts/e7-quality-no-overlap-e55d83f/`.
   written on the current stream while V payload/scales are written on the pool's `alt_stream`, then
   joined. Graph-off removes that branch as well as graph replay. If this rung passes, the next
   candidate is the narrower single-stream FP4 graph store, not adoption of global graph-off.
+- **Prepared diagnostic, not an adoption:** `FP4_STORE_SINGLE_STREAM=1` maps to the container-only
+  `SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM=1`. The default omits the environment variable and retains
+  upstream behavior. Before first serve, the dual-control GPU pool gate must prove both selections,
+  every payload/scale writer, radix moves, and fixed-tile allocation.
 - **Only changed factor:** disable CUDA graphs. Restore overlap scheduling and keep the original
   compiled writer, FA4/page 128, DSpark block 5, CDS2, 1M context, C8, and all quality inputs fixed.
 - **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,

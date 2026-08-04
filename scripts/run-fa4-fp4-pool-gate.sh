@@ -58,6 +58,7 @@ import sys
 from pathlib import Path
 
 expected = {
+    "capture_stream_selection",
     "ordinary_target_writer",
     "radix_move",
     "dspark_prefix_valid_writer",
@@ -70,7 +71,10 @@ expected = {
 for path_text in sys.argv[1:]:
     path = Path(path_text)
     text = path.read_text(encoding="utf-8", errors="replace")
-    if "FA4 FP4 POOL GATE PASS writers=4 allocation=fixed-tile" not in text:
+    if (
+        "FA4 FP4 POOL GATE PASS writers=4 allocation=fixed-tile stream-select=1"
+        not in text
+    ):
         raise SystemExit(f"{path}: missing final pool-gate PASS")
     records = []
     for line in text.splitlines():

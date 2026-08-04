@@ -6,6 +6,7 @@ from __future__ import annotations
 import gc
 import inspect
 import json
+import os
 from types import SimpleNamespace
 
 import torch
@@ -29,7 +30,9 @@ def emit(gate: str, **values: object) -> None:
     print(json.dumps({"gate": gate, **values}, sort_keys=True), flush=True)
 
 
-def make_pool(size: int = 512) -> MHATokenToKVPoolFP4Native:
+def make_pool(
+    size: int = 512, *, enable_alt_stream: bool = False
+) -> MHATokenToKVPoolFP4Native:
     return MHATokenToKVPoolFP4Native(
         size=size,
         page_size=PAGE,
@@ -40,8 +43,41 @@ def make_pool(size: int = 512) -> MHATokenToKVPoolFP4Native:
         layer_num=1,
         device="cuda",
         enable_memory_saver=False,
-        enable_alt_stream=False,
+        enable_alt_stream=enable_alt_stream,
         enable_kv_cache_copy=True,
+    )
+
+
+def capture_stream_selection_gate() -> None:
+    name = "SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM"
+    previous = os.environ.pop(name, None)
+    try:
+        default_pool = make_pool(enable_alt_stream=True)
+        default_enabled = default_pool.alt_stream is not None
+        del default_pool
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        os.environ[name] = "1"
+        candidate_pool = make_pool(enable_alt_stream=True)
+        candidate_disabled = candidate_pool.alt_stream is None
+        del candidate_pool
+        gc.collect()
+        torch.cuda.empty_cache()
+    finally:
+        if previous is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = previous
+    if not default_enabled or not candidate_disabled:
+        raise SystemExit(
+            "capture stream selection failed: "
+            f"{default_enabled=} {candidate_disabled=}"
+        )
+    emit(
+        "capture_stream_selection",
+        default_alt_stream=default_enabled,
+        candidate_single_stream=candidate_disabled,
     )
 
 
@@ -327,11 +363,15 @@ def allocation_gate() -> None:
 
 def main() -> int:
     torch.manual_seed(20260805)
+    capture_stream_selection_gate()
     ordinary_and_move_gate()
     dspark_prefix_valid_gate()
     swa_gate()
     allocation_gate()
-    print("FA4 FP4 POOL GATE PASS writers=4 allocation=fixed-tile", flush=True)
+    print(
+        "FA4 FP4 POOL GATE PASS writers=4 allocation=fixed-tile stream-select=1",
+        flush=True,
+    )
     return 0
 
 

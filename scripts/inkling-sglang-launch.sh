@@ -14,6 +14,7 @@
 # Site knobs (env): MASTER_IP IF HCA GID MODELS IMAGE SGLANG_PORT
 # Tuning knobs (env): ATTN MOE FP4GEMM MEMFRAC CTX SPEC GRAPHS GRAPH_BS RAGGED BLOCK MAXREQ PAGE
 # CONTINUOUS_DECODE_STEPS EXTRA_ARGS INKLING_SHEARED_BIAS
+# INKLING_FP4_KV_CAPTURE_SINGLE_STREAM (diagnostic only; default 0)
 # Boot-cache knobs (env): PERSIST_JIT_CACHE JIT_CACHE_ROOT
 # Decode-latency knobs (env, E8 experiment only): NCCL_ALGO NCCL_PROTO — unset preserves NCCL's
 # autotuned defaults (the measured champion); set only inside a same-session A/B.
@@ -96,6 +97,19 @@ case "${CUDA_LAUNCH_BLOCKING:-}" in
   *) echo "ERROR: CUDA_LAUNCH_BLOCKING must be 0, 1, or unset" >&2; exit 2 ;;
 esac
 
+# Stage 5A diagnostic: keep CUDA graphs but serialize only the FP4 pool's
+# capture-time K/V payload+scale stores. Zero/unset preserves the champion.
+FP4_CAPTURE_STREAM_ENV=()
+case "${INKLING_FP4_KV_CAPTURE_SINGLE_STREAM:-0}" in
+  0) ;;
+  1)
+    FP4_CAPTURE_STREAM_ENV+=(
+      -e SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM=1
+    )
+    ;;
+  *) echo "ERROR: INKLING_FP4_KV_CAPTURE_SINGLE_STREAM must be 0 or 1" >&2; exit 2 ;;
+esac
+
 # E8 opt-in: NCCL collective tuning for the per-decode-step TP2 all-reduce. Injected only when
 # set, so the default launch keeps NCCL's own protocol/algorithm selection (the measured champion).
 NCCL_TUNE_ENV=()
@@ -160,6 +174,7 @@ DOCKER_CMD=(
   ${RAGGED_ENV[@]+"${RAGGED_ENV[@]}"}
   ${INKLING_BIAS_ENV[@]+"${INKLING_BIAS_ENV[@]}"}
   ${CUDA_DEBUG_ENV[@]+"${CUDA_DEBUG_ENV[@]}"}
+  ${FP4_CAPTURE_STREAM_ENV[@]+"${FP4_CAPTURE_STREAM_ENV[@]}"}
   -e NCCL_IB_HCA="$HCA" -e NCCL_IB_GID_INDEX="$GID"
   -e NCCL_SOCKET_IFNAME="$IF" -e GLOO_SOCKET_IFNAME="$IF" -e TP_SOCKET_IFNAME="$IF"
   -e NCCL_NET=IB -e NCCL_IB_DISABLE=0 -e NCCL_NET_PLUGIN=none

@@ -24,6 +24,7 @@ Both are only ever instantiated when ``--kv-cache-dtype`` selects a quantized
 recipe, so they are structurally inert under ``auto``/bf16.
 """
 
+import os
 from typing import Optional
 
 import torch
@@ -36,6 +37,24 @@ from sglang.srt.mem_cache.memory_pool import (
 )
 
 FP4_SCALE_BLOCK_SIZE = 16
+FP4_CAPTURE_SINGLE_STREAM_ENV = "SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM"
+
+
+def _fp4_capture_alt_stream_enabled(requested: bool) -> bool:
+    """Resolve the capture-only FP4 copy stream without changing defaults.
+
+    The pinned upstream FP4 pool splits K/scales and V/scales across streams
+    only while a CUDA graph is being captured.  This opt-in diagnostic keeps
+    every other graph/model/backend setting intact while forcing that store
+    onto the current stream.  Invalid values fail before buffers are created.
+    """
+
+    raw = os.environ.get(FP4_CAPTURE_SINGLE_STREAM_ENV, "0")
+    if raw not in ("0", "1"):
+        raise ValueError(
+            f"{FP4_CAPTURE_SINGLE_STREAM_ENV} must be 0 or 1, got {raw!r}."
+        )
+    return requested and raw != "1"
 
 
 def _committed_locs(loc_2d: torch.Tensor, commit_lens: torch.Tensor) -> torch.Tensor:
@@ -183,6 +202,13 @@ class MHATokenToKVPoolFP4Native(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4)
     """
 
     SCALE_BLOCK_SIZE = FP4_SCALE_BLOCK_SIZE
+
+    def __init__(self, *args, enable_alt_stream: bool = True, **kwargs):
+        super().__init__(
+            *args,
+            enable_alt_stream=_fp4_capture_alt_stream_enabled(enable_alt_stream),
+            **kwargs,
+        )
 
     def _create_buffers(self):
         from contextlib import nullcontext
