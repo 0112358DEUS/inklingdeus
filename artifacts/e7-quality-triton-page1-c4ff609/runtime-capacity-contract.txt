@@ -1,0 +1,1 @@
+FP4 1M RUNTIME PASS attention=triton page=1 full_layer_tokens=1522726 headroom=265742 swa_layer_tokens=152272 spec=off block=none graphs=C16

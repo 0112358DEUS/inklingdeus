@@ -31,6 +31,7 @@ docker create --name "$CONTAINER" --entrypoint bash "$SOURCE_IMAGE" -lc "
     $SGL/srt/server_args.py \
     $SGL/srt/entrypoints/openai/serving_tokenize.py \
     $SGL/srt/function_call/function_call_parser.py \
+    $SGL/srt/layers/quantization/kvfp4_tensor.py \
     $SGL/srt/mem_cache/kv_quant_pools.py \
     $SGL/srt/mem_cache/kv_cache_configurator.py
 " >/dev/null
@@ -46,6 +47,6 @@ docker start -a "$CONTAINER"
 docker commit "$CONTAINER" "$TAG" >/dev/null
 docker rm "$CONTAINER" >/dev/null
 
-docker run --rm --entrypoint python3 "$TAG" -c \
-  'from sglang.kernels.ops.attention.flash_attn.cute import flash_attn_varlen_func; from sglang.srt.mem_cache.kv_quant_pools import MHATokenToKVPoolFP4Native; from sglang.srt.entrypoints.openai.protocol import Function, Tool, ToolChoice, ToolChoiceFuncName; from sglang.srt.function_call.function_call_parser import FunctionCallParser; tool = Tool(type="function", function=Function(name="probe", parameters={"type":"object"})); choice = ToolChoice(type="function", function=ToolChoiceFuncName(name="probe")); kind, schema = FunctionCallParser([tool], "inkling").get_structure_constraint(choice, parallel_tool_calls=False); assert kind == "json_schema" and schema["minItems"] == schema["maxItems"] == 1; assert callable(flash_attn_varlen_func); print("SPARKFLASH FP4 IMAGE IMPORT PASS")'
+docker run --rm --gpus all --entrypoint python3 "$TAG" -c \
+  'import torch; from sglang.kernels.ops.attention.flash_attn.cute import flash_attn_varlen_func; from sglang.srt.mem_cache.kv_quant_pools import MHATokenToKVPoolFP4Native; from sglang.srt.layers.quantization.kvfp4_tensor import FP4MXBlock16KVQuantizeUtil; from sglang.srt.entrypoints.openai.protocol import Function, Tool, ToolChoice, ToolChoiceFuncName; from sglang.srt.function_call.function_call_parser import FunctionCallParser; tool = Tool(type="function", function=Function(name="probe", parameters={"type":"object"})); choice = ToolChoice(type="function", function=ToolChoiceFuncName(name="probe")); kind, schema = FunctionCallParser([tool], "inkling").get_structure_constraint(choice, parallel_tool_calls=False); assert kind == "json_schema" and schema["minItems"] == schema["maxItems"] == 1; assert not hasattr(FP4MXBlock16KVQuantizeUtil.batched_quantize, "_torchdynamo_orig_callable"); q, s = FP4MXBlock16KVQuantizeUtil.batched_quantize(torch.ones((2, 4, 128), dtype=torch.bfloat16, device="cuda")); torch.cuda.synchronize(); assert q.shape == (2, 4, 64) and s.shape == (2, 32); assert callable(flash_attn_varlen_func); print("SPARKFLASH FP4 IMAGE IMPORT PASS")'
 echo "SPARKFLASH FP4 DEV IMAGE BAKED: $TAG"

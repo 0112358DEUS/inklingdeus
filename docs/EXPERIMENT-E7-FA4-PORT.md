@@ -862,3 +862,27 @@ is in `artifacts/e7-quality-triton-c8-61d2175/`.
   new C8 batches without error.
 - **Kill/adoption rule:** a reproduced illegal access implicates the common writer/storage path. A
   pass narrows the fault to FA4/page-128 interaction but cannot distinguish reader from layout.
+
+### Stage 5A.15 result — Triton/page-1 reference is not quality-equivalent
+
+Exact commit `c4ff609db87f01da3d18ad6d4e3f560912b2bf50`, runnable payload
+`43fcc8c0e954b4b3f35a6cc2e0ef47daad1af1473741560e02572d5f08ad796b`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+Triton/page 1 allocated 1,522,726 full-layer tokens, captured C1-C16 graphs, and passed T4 and the
+NIAH resume. It then failed the tool gate 9/16: malformed visible pseudo-calls, wrong arguments, and
+control-token leakage occurred. GSM8K did not run. This reference is numerically unsuitable and
+cannot clear the common FP4 writer. Raw evidence is in `artifacts/e7-quality-triton-page1-c4ff609/`.
+
+### Stage 5A.16 pre-registration — eager FP4 store quantization
+
+- **Hypothesis:** asynchronous Inductor-generated FP4 quantizer kernels are unstable in sustained
+  serving; the eager tensor implementation preserves numerics while removing that compiler seam.
+- **Only changed factor:** remove `@torch.compile` from
+  `FP4MXBlock16KVQuantizeUtil.batched_quantize`. The tensor algorithm, FP4 format, FA4/page-128
+  reader, DSpark block 5, CDS2, 1M context, C8, and all quality inputs remain unchanged.
+- **Image gate:** compilation/import plus a real GPU quantize call must prove eager dispatch and
+  expected payload/scale shapes.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
+  all graphs, T4, 16/16 tools, and at least five new normal-asynchronous C8 batches without error.
+- **Kill/adoption rule:** any error rejects eager quantization. A pass is a stability candidate only;
+  it must undergo final full GSM8K and performance comparison before adoption.
