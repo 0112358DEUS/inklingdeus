@@ -156,7 +156,15 @@ def main() -> int:
     joined = " ".join(command)
     assert "SGLANG_RAGGED_VERIFY_MODE" not in joined
     assert "SGLANG_OPT_USE_INKLING_SHEARED_BIAS" not in joined
+    assert "SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM" not in joined
     assert "NCCL_IB_HCA=rocep1s0f1,roceP2p1s0f1" in joined
+
+    single_stream = render(
+        root, {"INKLING_FP4_KV_CAPTURE_SINGLE_STREAM": "1"}
+    )
+    assert (
+        "SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM=1" in " ".join(single_stream)
+    )
 
     override_cds = render(root, {"CONTINUOUS_DECODE_STEPS": "4"})
     assert override_cds.count("--num-continuous-decode-steps") == 1

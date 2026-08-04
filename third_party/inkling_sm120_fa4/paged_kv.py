@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Optional
 from dataclasses import dataclass
 
 import cutlass
@@ -18,6 +18,8 @@ class PagedKVManager(ParamsBase):
     mPageTable: cute.Tensor
     mK_paged: cute.Tensor
     mV_paged: cute.Tensor
+    mK_scale: Optional[cute.Tensor]
+    mV_scale: Optional[cute.Tensor]
     thread_idx: Int32
 
     page_size_divmod: FastDivmodDivisor
@@ -47,6 +49,8 @@ class PagedKVManager(ParamsBase):
         mPageTable: cute.Tensor,
         mK_paged: cute.Tensor,
         mV_paged: cute.Tensor,
+        mK_scale: Optional[cute.Tensor],
+        mV_scale: Optional[cute.Tensor],
         page_size_divmod: FastDivmodDivisor,
         bidb: Int32,
         bidh: Int32,
@@ -94,6 +98,8 @@ class PagedKVManager(ParamsBase):
         mPageTable = mPageTable[bidb, None]
         mK_paged = mK_paged[None, None, bidh, None]
         mV_paged = mV_paged[None, None, bidh, None]
+        mK_scale = mK_scale[None, None, bidh, None] if const_expr(mK_scale is not None) else None
+        mV_scale = mV_scale[None, None, bidh, None] if const_expr(mV_scale is not None) else None
 
         cK = cute.make_identity_tensor((n_block_size, head_dim_padded))
         tKcK = gmem_thr_copy_KV.partition_S(cK)
@@ -111,6 +117,8 @@ class PagedKVManager(ParamsBase):
             mPageTable,
             mK_paged,
             mV_paged,
+            mK_scale,
+            mV_scale,
             thread_idx,
             page_size_divmod,
             seqlen_k,

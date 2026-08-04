@@ -1,0 +1,1 @@
+FA4 FP4 1M RUNTIME PASS full_layer_tokens=1325312 headroom=68328 swa_layer_tokens=132480 block=5 graphs=C16

@@ -1417,6 +1417,8 @@ class FlashAttentionForwardSm100:
                     mPageTable,
                     mK,
                     mV,
+                    None,
+                    None,
                     FastDivmodDivisor(page_size),
                     batch_idx,
                     head_idx_kv,

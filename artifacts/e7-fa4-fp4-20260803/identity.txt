@@ -1,0 +1,12 @@
+repo_sha=c607b8465cb169ef55fa06ddd2b29980f4313e9d
+branch=codex/inkling-north-star-loop-5
+image_tag=local/sglang-inkling:sparkflash-fp4-c607b84
+fa4_payload=9a7c390cf13732244c068e69241c0291021318c3a4d299523ed34e5a234048e4
+control1_image_id=sha256:306479b54e50110ef0f264318d9c111deded329cc1506cebe3a35e6e27fd407d
+control2_image_id=sha256:d85ee152dde7dd664270548cfcbdbf0148a43674fa2ad33fd7b09d5dec899c95
+control1_checkout=/home/control/inklingdeus-sparkflash-c607b84
+control2_checkout=/home/control2/inklingdeus-sparkflash-c607b84
+probe=benchmarks/fa4_sm121_fp4_paged_probe.py
+result=PASS cases=14 on each control, byte-identical logs
+worst_max_abs=0.0019738078117370605
+tolerance=0.05

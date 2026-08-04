@@ -42,6 +42,7 @@ from sglang.srt.mem_cache.allocator.swa import (
 from sglang.srt.mem_cache.deepseek_v4_memory_pool import DeepSeekV4TokenToKVPool
 from sglang.srt.mem_cache.hisparse_memory_pool import HiSparseDSATokenToKVPool
 from sglang.srt.mem_cache.kv_quant_pools import (
+    MHATokenToKVPoolFP4Native,
     MHATokenToKVPoolFP4Triton,
     MHATokenToKVPoolMXFP8Triton,
 )
@@ -212,8 +213,8 @@ class KVCacheConfigurator:
             in set(self.model_config.hf_text_config.mtp_local_layer_ids)
         )
 
-    def _triton_quant_pool_class(self):
-        """Quantized KV pool class for the TRITON lane, else None.
+    def _block_scaled_quant_pool_class(self):
+        """Native raw block-scaled pool for a supported attention lane.
 
         The triton backend + ``kernels/ops/attention/kv_quant_attention.py``
         read block-scaled KV per tile. mxfp8 already had a pool class upstream;
@@ -222,8 +223,9 @@ class KVCacheConfigurator:
         ``_build_mha_fp4_kv_pool``, and the ``quant_method`` route targets
         flashinfer/trtllm). Both are routed to the triton subclasses here.
 
-        Returns None for every other backend/dtype, so this is inert under
-        ``--kv-cache-dtype auto`` and for non-triton backends.
+        FA4 page-128 uses the same packed block-16 storage as Triton page-1 but
+        consumes it through the vendored SM121 fused reader. Returns None for
+        every other backend/dtype, so this is inert under ``auto``/BF16.
         """
         sa = self.server_args
         backends = {
@@ -231,11 +233,11 @@ class KVCacheConfigurator:
             sa.prefill_attention_backend or sa.attention_backend,
             sa.decode_attention_backend or sa.attention_backend,
         }
-        if backends != {"triton"}:
+        if backends not in ({"triton"}, {"fa4"}):
             return None
         dtype_str = get_model().kv_cache_dtype
         if dtype_str == "mxfp8":
-            return MHATokenToKVPoolMXFP8Triton
+            return MHATokenToKVPoolMXFP8Triton if backends == {"triton"} else None
         if dtype_str in ("nvfp4", "fp4_mx_block16") and is_float4_e2m1fn_x2(
             self.kv_cache_dtype
         ):
@@ -249,12 +251,18 @@ class KVCacheConfigurator:
                 raise NotImplementedError(
                     "fp4 KV cache with the triton backend does not support MLA."
                 )
-            if sa.page_size != 1:
+            required_page_size = 1 if backends == {"triton"} else 128
+            if sa.page_size != required_page_size:
                 raise NotImplementedError(
-                    "fp4 KV cache with the triton backend supports only "
-                    f"page_size=1; got page_size={sa.page_size}."
+                    "fp4 KV cache requires its backend-native page size: "
+                    f"backend={next(iter(backends))} page_size={sa.page_size}, "
+                    f"expected={required_page_size}."
                 )
-            return MHATokenToKVPoolFP4Triton
+            return (
+                MHATokenToKVPoolFP4Triton
+                if backends == {"triton"}
+                else MHATokenToKVPoolFP4Native
+            )
         return None
 
     def _build_fp4_quant_method(self, *, num_layers: int):
@@ -1253,7 +1261,7 @@ class KVCacheConfigurator:
         # fp4 branch at all, so --kv-cache-dtype nvfp4/fp4_mx_block16 fell
         # through to a plain MHATokenToKVPool whose `cache_k.to(self.dtype)`
         # cast is not a quantization and which has no scale buffers.
-        swa_pool_class = self._triton_quant_pool_class()
+        swa_pool_class = self._block_scaled_quant_pool_class()
         if swa_pool_class is None:
             swa_pool_class = (
                 MHATokenToKVPoolMXFP8
@@ -1348,12 +1356,15 @@ class KVCacheConfigurator:
                 if self.layer_info.start_layer <= i < self.layer_info.end_layer
             ]
         )
-        quant_method = self._build_fp4_quant_method(
-            num_layers=len(full_attention_layer_ids)
+        quant_pool_class = self._block_scaled_quant_pool_class()
+        quant_method = (
+            None
+            if quant_pool_class is not None
+            else self._build_fp4_quant_method(num_layers=len(full_attention_layer_ids))
         )
         # MXFP8 KV cache needs the block-scaled pool (data + UE8M0 scale
         # buffers) for the full-attention layers, same as the SWA branch.
-        full_pool_class = (
+        full_pool_class = quant_pool_class or (
             MHATokenToKVPoolMXFP8
             if get_model().kv_cache_dtype == "mxfp8" and not self.use_mla_backend
             else mha_pool_class
@@ -1402,7 +1413,7 @@ class KVCacheConfigurator:
     ) -> KVCache:
         # The DSpark draft's own pool comes through here; it must use the SAME
         # storage class as the target or the backend sees two layouts.
-        pool_cls = self._triton_quant_pool_class()
+        pool_cls = self._block_scaled_quant_pool_class()
         if pool_cls is not None:
             # The triton subclasses own their buffers; the flashinfer/trtllm
             # quant_method route is mutually exclusive with them.

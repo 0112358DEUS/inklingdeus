@@ -1,0 +1,1 @@
+FAIL: quality evaluation did not begin. The 1M runtime/capacity, graph, health, and pre-quality T4 gates passed, but the first NIAH calibration call hit SGLang /v1/tokenize HTTP 500 because TokenizeResponse.max_model_len contained Hugging Face's >64-bit no-limit sentinel. No NIAH answer or quality verdict was produced. Both containers stopped.

@@ -1,0 +1,1595 @@
+{
+  "schema_version": 1,
+  "plan": {
+    "cases": [
+      "get_weather",
+      "convert_currency",
+      "lookup_inventory",
+      "get_calendar_event"
+    ],
+    "repetitions_per_case": 4,
+    "responses": 32,
+    "post_tool_turns": 16,
+    "endpoint": "/v1/chat/completions",
+    "forbidden_tokens": [
+      "<|end_message|>",
+      "<|content_model_end_sampling|>",
+      "<|content_invoke_tool_json|>",
+      "<|message_model|>"
+    ]
+  },
+  "model": "inkling-small",
+  "flows": 16,
+  "passed_flows": 16,
+  "all_passed": true,
+  "results": [
+    {
+      "case": "get_weather",
+      "repetition": 0,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "76227ca1fdde4a4e94fba7805649e27f",
+        "object": "chat.completion",
+        "created": 1785813392,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_weather\",\"parameters\":{\"city\":\"London\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_5ae3f0d50da4479db05c5d9d",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 100,
+          "completion_tokens": 34,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_weather\",\"parameters\":{\"city\":\"London\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_5ae3f0d50da4479db05c5d9d",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "325c888f15174de9bfedfb52efea91f7",
+        "object": "chat.completion",
+        "created": 1785813394,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The weather in London is 18\u00b0C with clear skies.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 91,
+          "total_tokens": 107,
+          "completion_tokens": 16,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 15
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "The weather in London is 18\u00b0C with clear skies.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 0,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "dcb032b6375f4b6e8bcfe1f44eaef201",
+        "object": "chat.completion",
+        "created": 1785813396,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"convert_currency\",\"parameters\":{\"amount\":100,\"from_currency\":\"USD\",\"to_currency\":\"EUR\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_580da9cd40d846d9ac860096",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 148,
+          "completion_tokens": 54,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"convert_currency\",\"parameters\":{\"amount\":100,\"from_currency\":\"USD\",\"to_currency\":\"EUR\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_580da9cd40d846d9ac860096",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "36f78ca7cf2c4bfa94fcfb2d71f8d43e",
+        "object": "chat.completion",
+        "created": 1785813397,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "100 USD converts to 92 EUR.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 117,
+          "total_tokens": 129,
+          "completion_tokens": 12,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 11
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "100 USD converts to 92 EUR.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 0,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "21a265217f0d46b0bb5ddb9314093f8f",
+        "object": "chat.completion",
+        "created": 1785813399,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{  \"name\": \"lookup_inventory\",\"parameters\":{\"sku\":\"XR-17\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_0fc7486ff13d443b821da2d2",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 112,
+          "completion_tokens": 41,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{  \"name\": \"lookup_inventory\",\"parameters\":{\"sku\":\"XR-17\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_0fc7486ff13d443b821da2d2",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "45b79fff48ac4a05a443820c66e1ab33",
+        "object": "chat.completion",
+        "created": 1785813400,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "SKU XR-17 is in stock with a quantity of 24.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 100,
+          "total_tokens": 118,
+          "completion_tokens": 18,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "SKU XR-17 is in stock with a quantity of 24.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 0,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "fd3d1e9d1cd945daa04125b7af81928b",
+        "object": "chat.completion",
+        "created": 1785813403,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_calendar_event\", \"parameters\" :{\"date\":\"April 5, 2030\"}}  \n]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_9673022d6c874793a5c55a14",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 130,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_calendar_event\", \"parameters\" :{\"date\":\"April 5, 2030\"}}  \n]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_9673022d6c874793a5c55a14",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "d14a3df3665a4de4a9bf10a82fa53dce",
+        "object": "chat.completion",
+        "created": 1785813404,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "On April 5, 2030, you have a **Design review** scheduled at **14:00**.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 120,
+          "total_tokens": 148,
+          "completion_tokens": 28,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "On April 5, 2030, you have a **Design review** scheduled at **14:00**.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_weather",
+      "repetition": 1,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "e1117b42467c40b1b0891e8117cdccea",
+        "object": "chat.completion",
+        "created": 1785813406,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_weather\",\"parameters\": {\"city\": \"London\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_536e0ab064ec462a88ea3cd9",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 102,
+          "completion_tokens": 36,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_weather\",\"parameters\": {\"city\": \"London\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_536e0ab064ec462a88ea3cd9",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "1262764d97bd46cc9304ffc714e2b027",
+        "object": "chat.completion",
+        "created": 1785813407,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The weather in London is 18\u00b0C with clear skies.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 93,
+          "total_tokens": 109,
+          "completion_tokens": 16,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 15
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "The weather in London is 18\u00b0C with clear skies.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 1,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "c60b1d2087fc46c991c984df5cb34356",
+        "object": "chat.completion",
+        "created": 1785813410,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"convert_currency\", \"parameters\": {\"amount\": 100, \"from_currency\":  \"USD\", \"to_currency\": \"EUR\"} } ]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_e8c2247dd73e424a96d1bfec",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 157,
+          "completion_tokens": 63,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"convert_currency\", \"parameters\": {\"amount\": 100, \"from_currency\":  \"USD\", \"to_currency\": \"EUR\"} } ]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_e8c2247dd73e424a96d1bfec",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "7f3219cd806d4b9283258e51d617fcb7",
+        "object": "chat.completion",
+        "created": 1785813411,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "100 USD = 92 EUR.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 126,
+          "total_tokens": 137,
+          "completion_tokens": 11,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 10
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "100 USD = 92 EUR.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 1,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "eaade44720404173890368b8d0129257",
+        "object": "chat.completion",
+        "created": 1785813413,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"lookup_inventory\", \"parameters\": {\"sku\": \"sku: XR-17\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_b104fadca590465e817d932b",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 115,
+          "completion_tokens": 44,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"lookup_inventory\", \"parameters\": {\"sku\": \"sku: XR-17\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_b104fadca590465e817d932b",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "420fe575f23244a7ae2b579be68cbb1c",
+        "object": "chat.completion",
+        "created": 1785813414,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "SKU XR-17 is in stock with a quantity of 24.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 104,
+          "total_tokens": 122,
+          "completion_tokens": 18,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "SKU XR-17 is in stock with a quantity of 24.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 1,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "c699a6c421654ed782dd9005a08fbab2",
+        "object": "chat.completion",
+        "created": 1785813417,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_calendar_event\", \"parameters\" : {\"date\"  :  \",\"     } \n\n}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_5a084cd818e3415cba3983e5",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 130,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_calendar_event\", \"parameters\" : {\"date\"  :  \",\"     } \n\n}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_5a084cd818e3415cba3983e5",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "a7ac3264a6ca4e8f87c3d13436e96fcd",
+        "object": "chat.completion",
+        "created": 1785813418,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "On **2030-04-05**, there is a **Design review** scheduled at **14:00**.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 118,
+          "total_tokens": 146,
+          "completion_tokens": 28,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "On **2030-04-05**, there is a **Design review** scheduled at **14:00**.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_weather",
+      "repetition": 2,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "c4d7c5a542eb4b2e84a5aa07899e5a72",
+        "object": "chat.completion",
+        "created": 1785813420,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_weather\",\"parameters\": {\"city\": \"London\"} } ]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_0d354f6f51914bf3ac71f7d0",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 102,
+          "completion_tokens": 36,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_weather\",\"parameters\": {\"city\": \"London\"} } ]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_0d354f6f51914bf3ac71f7d0",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "e3b3d04201bf425abe3118fd41694322",
+        "object": "chat.completion",
+        "created": 1785813421,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The weather in London is 18\u00b0C and clear.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 109,
+          "completion_tokens": 15,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 14
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "The weather in London is 18\u00b0C and clear.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 2,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "edbc0bf99a95483d89872a0c30d16859",
+        "object": "chat.completion",
+        "created": 1785813423,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"convert_currency\",\"parameters\":{\"amount\":100,\"from_currency\":\"USD\",\"to_currency\":\"EUR\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_afa7d4fcd52146cf98980377",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 148,
+          "completion_tokens": 54,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"convert_currency\",\"parameters\":{\"amount\":100,\"from_currency\":\"USD\",\"to_currency\":\"EUR\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_afa7d4fcd52146cf98980377",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "f0eb6184195647cb8ed45b65600fa825",
+        "object": "chat.completion",
+        "created": 1785813424,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "100 USD = 92 EUR.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 117,
+          "total_tokens": 128,
+          "completion_tokens": 11,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 10
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "100 USD = 92 EUR.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 2,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "da4cb9e1f54b4a6d8ac62ef061dee759",
+        "object": "chat.completion",
+        "created": 1785813426,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"lookup_inventory\",\"parameters\":{\"sku\":\"XR-17\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_c872cb6e39f04d66910940ac",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 111,
+          "completion_tokens": 40,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"lookup_inventory\",\"parameters\":{\"sku\":\"XR-17\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_c872cb6e39f04d66910940ac",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "323e5c2294c24d9896b3a1386940de07",
+        "object": "chat.completion",
+        "created": 1785813427,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "SKU XR-17 is in stock with a quantity of 24.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 99,
+          "total_tokens": 117,
+          "completion_tokens": 18,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "SKU XR-17 is in stock with a quantity of 24.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 2,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "2e4c06590cb44526b468ace6cd67bfda",
+        "object": "chat.completion",
+        "created": 1785813429,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_calendar_event\", \"parameters\": {\"date\":\"2030-04-05\"} \t} ]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_8070bc5aa84348e1837b4c5e",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 130,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_calendar_event\", \"parameters\": {\"date\":\"2030-04-05\"} \t} ]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_8070bc5aa84348e1837b4c5e",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "69f0a022cfb84299a747ce50bfba9fd0",
+        "object": "chat.completion",
+        "created": 1785813430,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "On **2030-04-05**, you have a **Design review** scheduled at **14:00**.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 120,
+          "total_tokens": 148,
+          "completion_tokens": 28,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "On **2030-04-05**, you have a **Design review** scheduled at **14:00**.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_weather",
+      "repetition": 3,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "f75d54e283ea4305bade72698d154c77",
+        "object": "chat.completion",
+        "created": 1785813432,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_weather\",\"parameters\": {\"city\": \"London\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_0cfc84f2f43a4e8387534d39",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 102,
+          "completion_tokens": 36,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_weather\",\"parameters\": {\"city\": \"London\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_0cfc84f2f43a4e8387534d39",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "26344bd7375c438299f3b2cdfda6a905",
+        "object": "chat.completion",
+        "created": 1785813433,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "The weather in London is 18\u00b0C with clear skies.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 93,
+          "total_tokens": 109,
+          "completion_tokens": 16,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 15
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "The weather in London is 18\u00b0C with clear skies.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 3,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "6c9fb652da18496885e455b96b82bd4f",
+        "object": "chat.completion",
+        "created": 1785813436,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"convert_currency\", \"parameters\": {\"amount\":100,\"from_currency\":\"100\",\"to_currency\":\"EUR\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_c2f6a4889a164e6d9e9e0727",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 150,
+          "completion_tokens": 56,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"convert_currency\", \"parameters\": {\"amount\":100,\"from_currency\":\"100\",\"to_currency\":\"EUR\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_c2f6a4889a164e6d9e9e0727",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "a691d62cfb504ac1a9a701e0c113a1ee",
+        "object": "chat.completion",
+        "created": 1785813437,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "100 USD = 92 EUR.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 119,
+          "total_tokens": 130,
+          "completion_tokens": 11,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 10
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "100 USD = 92 EUR.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 3,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "b3144ff9eb0041b5bb473487b0796217",
+        "object": "chat.completion",
+        "created": 1785813439,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"lookup_inventory\",\"parameters\":{\"sku\":\"SKU XR-17\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_6e06099098604feca8df7a27",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 112,
+          "completion_tokens": 41,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"lookup_inventory\",\"parameters\":{\"sku\":\"SKU XR-17\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_6e06099098604feca8df7a27",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "dda3dcd17046414c8e08a6aa5f656d8a",
+        "object": "chat.completion",
+        "created": 1785813440,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "SKU XR-17 is in stock with a quantity of 24.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 100,
+          "total_tokens": 118,
+          "completion_tokens": 18,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "SKU XR-17 is in stock with a quantity of 24.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 3,
+      "passed": true,
+      "failures": [],
+      "tool_response": {
+        "id": "03611321de4f44dca0c2fa6525aa0e8f",
+        "object": "chat.completion",
+        "created": 1785813442,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "[{ \"name\": \"get_calendar_event\", \"parameters\" :{\"date\":\"2030-04-05\"}}]",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_78ec83068de141968eda43ca",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 128,
+          "completion_tokens": 53,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "[{ \"name\": \"get_calendar_event\", \"parameters\" :{\"date\":\"2030-04-05\"}}]",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_78ec83068de141968eda43ca",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": {
+        "id": "27d65279aacb4796bde16da96b571750",
+        "object": "chat.completion",
+        "created": 1785813444,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "On **2030-04-05**, you have a **Design review** scheduled at **14:00**.",
+              "reasoning_content": null,
+              "tool_calls": null
+            },
+            "logprobs": null,
+            "finish_reason": "stop",
+            "matched_stop": 200006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 118,
+          "total_tokens": 146,
+          "completion_tokens": 28,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "post_tool_message": {
+        "role": "assistant",
+        "content": "On **2030-04-05**, you have a **Design review** scheduled at **14:00**.",
+        "reasoning_content": null,
+        "tool_calls": null
+      }
+    }
+  ]
+}

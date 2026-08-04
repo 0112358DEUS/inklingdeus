@@ -350,6 +350,8 @@ class FlashAttentionForwardSm120Tma(FlashAttentionForwardBase):
         aux_tensors=None,
         dropout_seed_lo: Optional[Int32] = None,
         dropout_seed_hi: Optional[Int32] = None,
+        sfk: Optional[cute.Tensor] = None,
+        sfv: Optional[cute.Tensor] = None,
         # Always keep stream as the last parameter (matches base
         # FlashAttentionForwardSm80 convention; cute.compile binds args
         # positionally, so re-ordering this breaks callers).
@@ -368,6 +370,7 @@ class FlashAttentionForwardSm120Tma(FlashAttentionForwardBase):
         assert dropout_seed_lo is None and dropout_seed_hi is None, (
             "Dropout is not supported on the SM120 TMA kernel"
         )
+        assert sfk is None and sfv is None, "FP4 KV requires the paged CpAsync kernel"
         self._check_type(
             *(t.element_type if t is not None else None
               for t in (mQ, mK, mV, mO, mLSE, mCuSeqlensQ, mCuSeqlensK, mSeqUsedQ, mSeqUsedK))

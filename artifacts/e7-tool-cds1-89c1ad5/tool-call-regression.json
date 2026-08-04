@@ -1,0 +1,1371 @@
+{
+  "schema_version": 1,
+  "plan": {
+    "cases": [
+      "get_weather",
+      "convert_currency",
+      "lookup_inventory",
+      "get_calendar_event"
+    ],
+    "repetitions_per_case": 4,
+    "responses": 32,
+    "post_tool_turns": 16,
+    "endpoint": "/v1/chat/completions",
+    "forbidden_tokens": [
+      "<|end_message|>",
+      "<|content_model_end_sampling|>",
+      "<|content_invoke_tool_json|>",
+      "<|message_model|>"
+    ]
+  },
+  "model": "inkling-small",
+  "flows": 16,
+  "passed_flows": 0,
+  "all_passed": false,
+  "results": [
+    {
+      "case": "get_weather",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "c795abd96bc9479ba6a10c0d0f4f64eb",
+        "object": "chat.completion",
+        "created": 1785807064,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_1fbfedf26da4494487c9ac8f",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                },
+                {
+                  "id": "call_47fce65bfd8a4fa9978fb092",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 101,
+          "completion_tokens": 35,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_1fbfedf26da4494487c9ac8f",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_47fce65bfd8a4fa9978fb092",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "16432e96548a4380b6d53c64e480f364",
+        "object": "chat.completion",
+        "created": 1785807066,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_61f1e4569df148ccbd3ddf7e",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                },
+                {
+                  "id": "call_c99ffd75e6ca4463a7cdce2b",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 149,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_61f1e4569df148ccbd3ddf7e",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_c99ffd75e6ca4463a7cdce2b",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "9a73fe1c939249f388fe44f3df15219e",
+        "object": "chat.completion",
+        "created": 1785807067,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_dda831900c754bd5a6e1d06a",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                },
+                {
+                  "id": "call_1ca526cc4bfa4e9889c362b4",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 110,
+          "completion_tokens": 39,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_dda831900c754bd5a6e1d06a",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_1ca526cc4bfa4e9889c362b4",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 0,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "d77b7d76ebab4ca6a5a1c376af02b0e3",
+        "object": "chat.completion",
+        "created": 1785807069,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_1e911d91afff48c2bbb4b0db",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                },
+                {
+                  "id": "call_ec55e38f7c1e46778a894d30",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 124,
+          "completion_tokens": 49,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_1e911d91afff48c2bbb4b0db",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_ec55e38f7c1e46778a894d30",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_weather",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "510aef8cb35e428eab21524973284a60",
+        "object": "chat.completion",
+        "created": 1785807070,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_f1e26453c6964b81a38ec2e6",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                },
+                {
+                  "id": "call_bf0d7c12fd514d77ad20c07a",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 101,
+          "completion_tokens": 35,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_f1e26453c6964b81a38ec2e6",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_bf0d7c12fd514d77ad20c07a",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "a9551b6f451a490ebd9ed1f82086b794",
+        "object": "chat.completion",
+        "created": 1785807071,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_f60bc0a2ab704d76af2a1431",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                },
+                {
+                  "id": "call_c8813bc9ab0f4b26b1a1d19e",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 149,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_f60bc0a2ab704d76af2a1431",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_c8813bc9ab0f4b26b1a1d19e",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "6b5d827c2bb846779e4086bc8f2546f8",
+        "object": "chat.completion",
+        "created": 1785807072,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_d8fafa5368334bffaf03074c",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                },
+                {
+                  "id": "call_78da09d7f5a04c57a1b52abd",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 110,
+          "completion_tokens": 39,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_d8fafa5368334bffaf03074c",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_78da09d7f5a04c57a1b52abd",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 1,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "a0b1cb694e894c8d93da2ba5972ec73e",
+        "object": "chat.completion",
+        "created": 1785807074,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_c552f329a94049e28e969de5",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                },
+                {
+                  "id": "call_fb0505f1004b4025891a1439",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 124,
+          "completion_tokens": 49,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_c552f329a94049e28e969de5",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_fb0505f1004b4025891a1439",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_weather",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "8b134d7569324c58b0c8e3a3580722b9",
+        "object": "chat.completion",
+        "created": 1785807075,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_d07210d685a64e5bb7fef21a",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                },
+                {
+                  "id": "call_3b649e048ddc450bba9db046",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 101,
+          "completion_tokens": 35,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_d07210d685a64e5bb7fef21a",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_3b649e048ddc450bba9db046",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "bd4f58e36f4f4bd4af66190dd7a3d28c",
+        "object": "chat.completion",
+        "created": 1785807076,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_6fe43373d1ea415981d12ae2",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                },
+                {
+                  "id": "call_5d0d237a830e4058833084fa",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 149,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_6fe43373d1ea415981d12ae2",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_5d0d237a830e4058833084fa",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "6077a38832504b4693308620ef5c8dc5",
+        "object": "chat.completion",
+        "created": 1785807077,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_f200d7e0ca864378bd0b545a",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                },
+                {
+                  "id": "call_851fc29d85ee40d9a90046a6",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 110,
+          "completion_tokens": 39,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_f200d7e0ca864378bd0b545a",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_851fc29d85ee40d9a90046a6",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 2,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "980ab2aee03544e98d10b2bb66d3fa2c",
+        "object": "chat.completion",
+        "created": 1785807079,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_2ccc3255a8cc4895964da017",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                },
+                {
+                  "id": "call_ba7d3c4daead468999696d9f",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 124,
+          "completion_tokens": 49,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_2ccc3255a8cc4895964da017",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_ba7d3c4daead468999696d9f",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_weather",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "c4fcb5623e3c41bca8c51d32d3477e25",
+        "object": "chat.completion",
+        "created": 1785807080,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_0ab2966a1b6f4e0e9080a6c0",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                },
+                {
+                  "id": "call_0b31b5d701304802abc9f0d5",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_weather",
+                    "arguments": "{\"city\": \"London\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 66,
+          "total_tokens": 101,
+          "completion_tokens": 35,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 17
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_0ab2966a1b6f4e0e9080a6c0",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          },
+          {
+            "id": "call_0b31b5d701304802abc9f0d5",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"city\": \"London\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "convert_currency",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "0a9aa384fa6e4de0b22dc01092ff2af5",
+        "object": "chat.completion",
+        "created": 1785807081,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_50a2587ddbb34c71a44ddf08",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                },
+                {
+                  "id": "call_4c296ea09c09429cb8e628ae",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "convert_currency",
+                    "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 94,
+          "total_tokens": 149,
+          "completion_tokens": 55,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 27
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_50a2587ddbb34c71a44ddf08",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          },
+          {
+            "id": "call_4c296ea09c09429cb8e628ae",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "convert_currency",
+              "arguments": "{\"amount\": 100, \"from_currency\": \"USD\", \"to_currency\": \"EUR\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "lookup_inventory",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "d1200fb14ede455f963fbf9117e51f28",
+        "object": "chat.completion",
+        "created": 1785807082,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_166649e071574fce966b5ab8",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                },
+                {
+                  "id": "call_921e7d3cecde41fcbdf11598",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "lookup_inventory",
+                    "arguments": "{\"sku\": \"XR-17\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 71,
+          "total_tokens": 110,
+          "completion_tokens": 39,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 19
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_166649e071574fce966b5ab8",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          },
+          {
+            "id": "call_921e7d3cecde41fcbdf11598",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "lookup_inventory",
+              "arguments": "{\"sku\": \"XR-17\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    },
+    {
+      "case": "get_calendar_event",
+      "repetition": 3,
+      "passed": false,
+      "failures": [
+        "expected exactly one structured tool call"
+      ],
+      "tool_response": {
+        "id": "082ffb9374ae4ae4ab46ea420b7693fe",
+        "object": "chat.completion",
+        "created": 1785807084,
+        "model": "inkling-small",
+        "choices": [
+          {
+            "index": 0,
+            "message": {
+              "role": "assistant",
+              "content": "",
+              "reasoning_content": null,
+              "tool_calls": [
+                {
+                  "id": "call_00f3d1903f3145f48a185562",
+                  "index": 0,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                },
+                {
+                  "id": "call_9bb6abe3b92d415382fc1b18",
+                  "index": 1,
+                  "type": "function",
+                  "function": {
+                    "name": "get_calendar_event",
+                    "arguments": "{\"date\": \"2030-04-05\"}"
+                  }
+                }
+              ]
+            },
+            "logprobs": null,
+            "finish_reason": "tool_calls",
+            "matched_stop": null
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 75,
+          "total_tokens": 124,
+          "completion_tokens": 49,
+          "prompt_tokens_details": null,
+          "reasoning_tokens": 24
+        },
+        "metadata": {
+          "weight_version": "default"
+        }
+      },
+      "tool_message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "tool_calls": [
+          {
+            "id": "call_00f3d1903f3145f48a185562",
+            "index": 0,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          },
+          {
+            "id": "call_9bb6abe3b92d415382fc1b18",
+            "index": 1,
+            "type": "function",
+            "function": {
+              "name": "get_calendar_event",
+              "arguments": "{\"date\": \"2030-04-05\"}"
+            }
+          }
+        ]
+      },
+      "post_tool_response": null,
+      "post_tool_message": null
+    }
+  ]
+}

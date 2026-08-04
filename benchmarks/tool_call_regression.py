@@ -110,6 +110,7 @@ def post_chat(
         "temperature": 0,
         "stream": False,
         "reasoning_effort": "none",
+        "parallel_tool_calls": False,
     }
     request = urllib.request.Request(
         f"{url}/v1/chat/completions",
@@ -171,7 +172,9 @@ def run_flow(
             "repetition": repetition,
             "passed": False,
             "failures": failures,
+            "tool_response": first,
             "tool_message": first_message,
+            "post_tool_response": None,
             "post_tool_message": None,
         }
 
@@ -214,7 +217,9 @@ def run_flow(
         "repetition": repetition,
         "passed": not failures,
         "failures": failures,
+        "tool_response": first,
         "tool_message": first_message,
+        "post_tool_response": second,
         "post_tool_message": second_message,
     }
 

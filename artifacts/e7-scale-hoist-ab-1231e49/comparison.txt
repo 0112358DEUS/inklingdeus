@@ -1,0 +1,4 @@
+A=25.652+/-0.331 tok/s  B=25.973+/-0.305 tok/s  delta=+0.321  combined_se=0.450
+accept A=2.134+/-0.026 B=2.094+/-0.024 delta=-0.040 combined_se=0.036
+latency A=6.270+/-0.083s B=6.187+/-0.073s delta=-0.084s combined_se=0.111s
+REJECT: accept loss is at least one combined standard error

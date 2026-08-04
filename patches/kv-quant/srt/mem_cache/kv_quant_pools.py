@@ -1,4 +1,4 @@
-"""Block-scaled quantized KV pools for the SGLang TRITON lane (GB10 sm_121a).
+"""Block-scaled quantized KV pools for GB10 sm_121a attention backends.
 
 Two subclasses that make the in-image quantized pools usable by
 ``TritonAttnBackend`` + ``kv_quant_attention``:
@@ -15,15 +15,16 @@ Two subclasses that make the in-image quantized pools usable by
     ``ValueError: MXFP8 KV cache requires K and V scale tensors.`` on the very
     first request of the mxfp8 boot test.
 
-``MHATokenToKVPoolFP4Triton``
+``MHATokenToKVPoolFP4Native``
     ``fp4_mx_block16`` storage (packed e2m1 + one UE8M0 scale per 16 elements)
-    with a RAW reader, so attention dequantizes per tile in-kernel instead of
-    materializing the whole pool.
+    with a RAW reader. Triton and the SM121 FA4 development path both consume
+    payload + scales per tile instead of materializing the whole pool.
 
 Both are only ever instantiated when ``--kv-cache-dtype`` selects a quantized
 recipe, so they are structurally inert under ``auto``/bf16.
 """
 
+import os
 from typing import Optional
 
 import torch
@@ -36,6 +37,24 @@ from sglang.srt.mem_cache.memory_pool import (
 )
 
 FP4_SCALE_BLOCK_SIZE = 16
+FP4_CAPTURE_SINGLE_STREAM_ENV = "SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM"
+
+
+def _fp4_capture_alt_stream_enabled(requested: bool) -> bool:
+    """Resolve the capture-only FP4 copy stream without changing defaults.
+
+    The pinned upstream FP4 pool splits K/scales and V/scales across streams
+    only while a CUDA graph is being captured.  This opt-in diagnostic keeps
+    every other graph/model/backend setting intact while forcing that store
+    onto the current stream.  Invalid values fail before buffers are created.
+    """
+
+    raw = os.environ.get(FP4_CAPTURE_SINGLE_STREAM_ENV, "0")
+    if raw not in ("0", "1"):
+        raise ValueError(
+            f"{FP4_CAPTURE_SINGLE_STREAM_ENV} must be 0 or 1, got {raw!r}."
+        )
+    return requested and raw != "1"
 
 
 def _committed_locs(loc_2d: torch.Tensor, commit_lens: torch.Tensor) -> torch.Tensor:
@@ -153,8 +172,8 @@ class MHATokenToKVPoolMXFP8Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolMX
         )
 
 
-class MHATokenToKVPoolFP4Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4):
-    """fp4_mx_block16 pool read per-tile by the triton kernels.
+class MHATokenToKVPoolFP4Native(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4):
+    """fp4_mx_block16 pool exposed as raw payload plus scale rows.
 
     Differences from ``MHATokenToKVPoolFP4``:
 
@@ -183,6 +202,13 @@ class MHATokenToKVPoolFP4Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4)
     """
 
     SCALE_BLOCK_SIZE = FP4_SCALE_BLOCK_SIZE
+
+    def __init__(self, *args, enable_alt_stream: bool = True, **kwargs):
+        super().__init__(
+            *args,
+            enable_alt_stream=_fp4_capture_alt_stream_enabled(enable_alt_stream),
+            **kwargs,
+        )
 
     def _create_buffers(self):
         from contextlib import nullcontext
@@ -315,3 +341,9 @@ class MHATokenToKVPoolFP4Triton(_QuantizedPrefixValidMixin, MHATokenToKVPoolFP4)
             "KV transfer / disaggregation is unsupported for fp4_mx_block16 KV "
             "cache (scale buffers are not exposed)."
         )
+
+
+# Compatibility name retained for the already-proven Triton lane. Both names
+# intentionally resolve to the same class so the champion's page-1 behavior is
+# byte-identical while FA4 can opt into page-128 raw reads.
+MHATokenToKVPoolFP4Triton = MHATokenToKVPoolFP4Native

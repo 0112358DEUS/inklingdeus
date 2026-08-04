@@ -1,0 +1,1 @@
+block=6 FP4 CAPACITY PASS full_layer_tokens=1276800 headroom=19816 swa_layer_tokens=127616

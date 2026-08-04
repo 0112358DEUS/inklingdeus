@@ -155,6 +155,330 @@ This clears E7's DSpark serving-correctness checkpoint. It is not N3 yet: the FA
 the locked depth/GSM8K/tool quality suite and a same-session, replicated triton-vs-FA4 performance
 gate. The champion remains triton/page-1/FP4 KV.
 
+## Stage 5 pre-registration — native page-128 FP4 KV
+
+### Hardware and format decision
+
+SM121 has two distinct Blackwell execution families that must not be conflated. It lacks the
+SM100 `tcgen05`/TMEM attention path, but PTX 8.8 exposes warp-level block-scaled
+`mma.sync.aligned` FP4 on the SM120 family. NVIDIA's current
+[PTX feature table](https://docs.nvidia.com/cuda/archive/12.9.2/parallel-thread-execution/index.html)
+lists the `.e2m1`, `.kind`, `.block_scale`, and `.scale_vec_size` warp-MMA features for
+`sm_120f`. The installed CUTLASS DSL 4.6.0 on both development images contains
+`warp.MmaMXF4Op` and `warp.MmaMXF4NVF4Op` for SM121a.
+
+That does **not** make the current cache bytes a legal native-MMA operand. The frozen
+`fp4_mx_block16` cache is packed E2M1 plus one UE8M0 scale per 16 elements. NVIDIA's
+[warp-MMA programming guide](https://docs.nvidia.com/cutlass/latest/media/docs/pythonDSL/mma_docs/wmma_programming.html#block-scaled-mma)
+defines:
+
+- `MmaMXF4Op`: E2M1, UE8M0, scale-vector 32;
+- `MmaMXF4NVF4Op`: E2M1, UE4M3, scale-vector 16.
+
+Therefore a direct MMA over the current block-16/UE8M0 storage would apply the wrong scale
+contract. Stage 5 preserves the proven cache format and separates capacity/correctness from a
+later cache-format experiment.
+
+### Stage 5A — fused exact block-16 reader
+
+- **Hypothesis:** FA4 can consume the existing packed block-16 cache by decoding only the K/V
+  tile selected by the page table into the existing BF16 shared-memory tiles. This removes stock
+  SGLang's whole-pool BF16 materialization while leaving the already proven BF16 MMA, score-mod,
+  softmax, and P×V numerics unchanged.
+- **One coherent factor:** the FA4 development lane moves from BF16 page-128 storage to the
+  existing `fp4_mx_block16` payload/scale contract plus its required fused paged reader. Model,
+  MoE/dense-FP4 backends, DSpark block, score-mod, graph tiers, context, network, and champion
+  defaults remain fixed. A new image tag must be used; `fa4-sm121-dev` and the champion tag are
+  immutable inputs.
+- **Implementation contract:** the SGLang pool returns raw packed K/V and separate scale buffers;
+  payload and scale rows move together for ordinary writes, prefix-valid commits, radix moves,
+  SWA translation, and DSpark injection. The FA4 interface accepts explicit `sfk`/`sfv` plus a
+  fail-closed FP4-format marker. On SM121 paged attention, each selected page row is decoded
+  on-the-fly into the kernel's K/V shared-memory tile. No per-layer or per-request full-pool BF16
+  tensor may be allocated.
+- **Expected effect:** storage cost falls from 2 bytes to 0.5625 bytes per KV element, a
+  theoretical 3.5556× pool-capacity multiplier. From the stage-4 359,936-token full pool this is
+  sufficient in principle for at least 1,279,772 tokens, above the 1,256,984-token moonshot gate.
+  This first rung is a correctness/capacity gate; it makes no throughput claim until the reader is
+  vectorized and profiled.
+- **Primitive gate:** on both controls, independently seeded tensors must prove packed payload and
+  scale identity against SGLang's reference quantizer, exact E2M1/UE8M0 element reconstruction,
+  finite outputs, deterministic repeatability, and page/SWA boundary attention at
+  1/127/128/129/511/512/513 tokens. Attention max absolute error must remain at most 0.05 versus a
+  torch dequantized reference.
+- **Writer gate:** ordinary target, target prefix-valid/radix move, SWA, and DSpark hidden-state
+  injection fixtures must each prove that payload and scale bytes reach identical destination
+  rows. Any payload-only move is a hard failure.
+- **Allocation gate:** source inspection plus CUDA memory snapshots must prove that one attention
+  call allocates no BF16 object proportional to total pool capacity. Only fixed-size per-CTA
+  shared-memory tiles and existing output/split buffers are allowed.
+- **Serving gate:** spec-off first, then unchanged DSpark block 5. Each must reach health and pass
+  two consecutive byte-exact T4 probes. Pool logs must report at least 1,256,984 usable full tokens
+  without OOM. A mismatch or whole-pool materialization rejects the stage immediately.
+- **Cost bound:** one isolated primitive/image build and at most two serving launches per rung.
+  Compile or numerical failure is documented before another implementation factor is introduced.
+
+### Stage 5B — hardware-native block-scaled QK
+
+Only after 5A passes may a separate image change the cache scale vector to block-32 UE8M0 and
+quantize Q to the same legal `MmaMXF4Op` contract for Q×K. P×V stays on the exact fused V-dequant
+path because the attention probabilities are not an E2M1 operand. This is a new numerical format,
+not an optimization flag: it requires fresh payload/scale tests, page-boundary attention, T4,
+NIAH, GSM8K, tool, and same-session performance gates. It is adopted only if it preserves every
+quality gate and improves the lower 1-SE throughput bound; otherwise 5A remains the native
+FP4-storage reference path.
+
+### Stage 5A primitive result — pass on both controls
+
+The correctness-first fused reader compiled and ran at exact commit
+`c607b8465cb169ef55fa06ddd2b29980f4313e9d`. Independently baked images on the two controls had
+different Docker layer IDs, as expected, but the same FA4 payload fingerprint
+`9a7c390cf13732244c068e69241c0291021318c3a4d299523ed34e5a234048e4`.
+
+Both controls passed all 14 full/SWA cases at lengths 1/127/128/129/511/512/513. Their complete
+logs are byte-identical. The worst max absolute error against the torch reference over the
+reference-dequantized payload was `0.0019738078117370605`, versus the predeclared `0.05` limit;
+length 1 was exact. Each case also re-quantized K/V twice and required payload and scale bytes to
+match before the FA4 call. Raw logs and image identities are in
+`artifacts/e7-fa4-fp4-20260803/`.
+
+This clears only the isolated reader primitive. Live SGLang backend plumbing, the four-writer
+gate, allocation proof, usable-capacity log, serving health, and byte-exact T4 remain pending; no
+champion or control default changed.
+
+### Stage 5A serving attempts 1-2 — capacity clears, dispatch seams reject
+
+The first isolated serving attempt failed before model load because SGLang's stock FP4/FA4
+compatibility table rejected `fa4` as a decode backend (wall #27). The next exact image narrowed
+that exception to `fp4_mx_block16` on SM120-family hardware with page size 128.
+
+The second attempt cleared that route, loaded both ranks, and allocated
+`full_layer_tokens=1445504` plus `swa_layer_tokens=144512`. The usable full-attention capacity is
+188,520 tokens (14.998%) above the 1,256,984-token gate. Per-rank logs reported 2.71 GB for each
+full K/V payload, 1.36 GB for each SWA K/V payload, 8.14 GB for the combined SWA pool, and
+16.93 GB still available when target decode-graph capture began.
+
+The first batch-16 graph then failed before health with
+`flash_attn_with_kvcache() got an unexpected keyword argument 'kv_fp4'`. Runtime inspection tied
+the callable to `sglang.kernels.ops.attention.flash_attention`, whose generic signature lacked the
+marker even though its existing `ver == 4` branch calls the already extended FA4 wrapper. This is
+wall #28: the next image adds a fail-closed, version-4-only generic dispatch seam and changes no
+kernel, cache format, model, graph, network, or champion flag. The two failed launches exhaust the
+original Stage 5A serving-attempt bound; this documented dispatch correction starts the next
+bounded routing rung. Neither attempt reached health or T4, and both containers were stopped.
+
+### Stage 5A routing rung result — spec-off serving pass
+
+Exact commit `9f62de49ca6318a8008d03750e06eb8d24683751` added only the documented
+version-4 dispatcher seam and an executable capacity assertion. Independently baked Control 1 and
+Control 2 images had different Docker layer IDs but the same complete payload fingerprint
+`8b88229301b6b5817cec177c7570d8b1ee24a88640c24bb2d75aeb09f4b11a7f`. Both FP4 paged
+numerical probes passed 14/14 before serving.
+
+The two-node target allocated `full_layer_tokens=1537152` and `swa_layer_tokens=153600`. The
+full pool exceeded the 1,256,984-token gate by 280,168 tokens (22.29%). It captured all 12 locked
+decode graph tiers in 179.88 seconds, reached health with 13.96 GB available, and the runtime
+inspection proved FA4/page-128/`fp4_mx_block16`/score-mod/spec-off on both ranks. Two consecutive
+T4 responses matched the frozen expected bytes and SHA-256 exactly. The runner then intentionally
+stopped both containers.
+
+Raw identities, independent numerical logs, container inspections, server logs, capacity/runtime
+contracts, and both T4 records are in `artifacts/e7-fa4-fp4-specoff-9f62de4/`. This clears native
+FP4 storage for spec-off serving correctness and the target-capacity moonshot gate. It is not yet
+a DSpark, 1M NIAH, quality, throughput, or adoption result; the next gate reuses this exact image
+and changes only speculation from off to DSpark block 5.
+
+### Stage 5A DSpark result — serving correctness pass
+
+The next runner reused exact commit `9f62de49ca6318a8008d03750e06eb8d24683751` and the identical
+`8b88229301b6b5817cec177c7570d8b1ee24a88640c24bb2d75aeb09f4b11a7f` image payload.
+The only serving change was enabling DSpark block 5. Both controls again passed the 14-case FP4
+paged numerical probe before launch.
+
+Target and draft loaded with native FP4 KV. The target retained `full_layer_tokens=1280896` and
+`swa_layer_tokens=128000`, clearing the 1,256,984-token gate by 23,912 tokens while the draft also
+allocated its separate 1,280,896-token FP4 pool. Runtime logs prove gamma 5, FA4 for target and
+draft, all 12 six-token target verify graph tiers, all 12 five-token draft tiers, and the greedy
+proposal folded into the draft CUDA graph. The locked container inspection passed on both ranks,
+the server reached health, and two consecutive T4 responses matched byte-for-byte. The runner
+then stopped both containers.
+
+Raw evidence is in `artifacts/e7-fa4-fp4-dspark-b5-9f62de4/`. This clears the Stage 5A spec-off and
+DSpark serving-correctness gates plus the usable-capacity threshold. Dedicated payload-plus-scale
+writer fixtures and the no-pool-sized-BF16 allocation audit remain before quality/performance
+promotion; no champion or default changed.
+
+### Stage 5A pool integrity result — dual-control pass
+
+Exact test commit `71c164532b71aa37ad9a2cf5550d46b6bc53b31d` ran against the unchanged
+SparkFlash image payload on both controls. The GPU fixture compared every destination row against
+SGLang's reference FP4 quantizer and passed ordinary target writes, prefix-valid DSpark injection,
+SWA full/local routing, direct radix moves, and hybrid-SWA radix moves. In every case K/V payload
+and K/V scale bytes moved together; uncommitted prefix-valid destinations remained zero.
+
+The allocation fixture then created a 262,144-token pool, whose logical BF16 K/V size is
+537,133,056 bytes. Its packed payload plus scales occupied 151,068,672 bytes, exactly 0.28125 of
+BF16 (3.5556× capacity). After a warm call, an FA4 attention call over the large raw pool added
+only 4,096 peak allocated bytes on each control, versus the predeclared 67,108,864-byte ceiling.
+The raw accessors returned uint8 storage and source inspection confirmed that they contain no
+whole-pool `batched_dequantize` call.
+
+Raw dual-control logs, identity, machine-checked contract, and decision are in
+`artifacts/e7-fa4-fp4-pool-gate-71c1645/`. Stage 5A has now cleared its primitive, writer,
+allocation, capacity, spec-off serving, DSpark serving, and T4 gates. Quality, 1M-context behavior,
+performance, energy, soak, and upstream readiness remain; the champion is still unchanged.
+
+### Stage 5A DSpark block sweep — block 5 selected
+
+Exact runner commit `f79ed99f6c32b4c0c6705124df01095d8a7fe9c3` reused the unchanged
+SparkFlash image and ran blocks 7, 5, and 6 in one contiguous measurement session. Every arm
+proved the locked FA4/page-128/FP4/score-mod runtime on both ranks, retained at least 1,256,984
+full tokens, initialized and graph-folded its declared DSpark width, completed exactly 32
+chat-templated open-ended samples, and passed T4 before and after measurement.
+
+| Block | Full tokens | Open-ended tok/s | Accept length | T4 pre/post |
+|---:|---:|---:|---:|---:|
+| 7 | 1,349,760 | 24.258 +/- 0.286 | 2.183 +/- 0.023 | PASS/PASS |
+| 5 | 1,371,264 | 25.267 +/- 0.320 | 2.115 +/- 0.025 | PASS/PASS |
+| 6 | 1,276,800 | 24.824 +/- 0.287 | 2.163 +/- 0.023 | PASS/PASS |
+
+Block 5 improved throughput over block 7 by 1.009 tok/s, or 2.35 combined standard errors; its
+lower 1-SE bound (24.946) also cleared block 7's upper bound (24.544). Block 6 gained 0.566 tok/s
+but its error bars overlapped, so it was rejected by the frozen selector. Block 5 is the measured
+Stage 5A candidate. Its 25.267 tok/s result is a candidate-selection result, not a moonshot speed
+pass: it remains below the 40 tok/s lower-bound goal and below the separately measured champion
+until a same-session A/B proves otherwise.
+
+Raw chat samples, positional acceptance histograms, all six T4 records, capacity/runtime contracts,
+container inspections, rank logs, and the machine decision are in
+`artifacts/e7-fa4-fp4-block-sweep-f79ed99/`.
+
+### Stage 5A.1 pre-registration — block-16 scale-hoisted reader
+
+- **Profiled mechanism:** the correctness-first reader assigns one packed byte to a thread at a
+  time. Because eight consecutive bytes share one UE8M0 scale, it reloads that byte and evaluates
+  `exp2(scale - 127)` eight times per 16-element block. At a 128x128 K or V tile this is 8,192
+  scale loads/exp2 evaluations instead of the format-minimum 1,024.
+- **One implementation factor:** change loop ownership from one packed byte to one complete
+  block-16 group. Each participating thread loads one scale, expands it once, then decodes the
+  group's eight packed bytes with the identical nibble-to-E2M1 algebra into the same BF16 shared
+  tile. Cache bytes, scale format, page lookup, output layout, MMA, softmax, score-mod, model,
+  DSpark block 5, graph sizes, and all launch flags stay unchanged.
+- **Expected effect:** remove seven eighths of scale loads and special-function `exp2` work from
+  both K and V tile loads. This should improve decode throughput without changing storage,
+  capacity, or numerical error. No magnitude is claimed before measurement.
+- **Primitive gate:** both controls must again pass all 14 full/SWA page-boundary cases, with
+  byte-identical payload/scale inputs and max absolute error no worse than the 0.05 contract.
+- **Serving gate:** the separately tagged image must preserve the >=1,256,984-token pool, locked
+  runtime contract, graph capture, and two exact T4 responses under block 5.
+- **Adoption gate:** a same-session scalar-versus-scale-hoisted open-ended n=32 A/B, T4-bracketed,
+  must show the optimized lower 1-SE throughput bound above the scalar upper bound. Any numerical
+  mismatch, boot failure, T4 mismatch, or overlapping/worse throughput rejects the change.
+- **Cost bound:** one image/primitive build, one serving correctness launch, and one two-arm A/B.
+
+### Stage 5A.1 result — rejected, scalar reader retained
+
+Exact kernel commit `b58400609cd3d5e62ffb4b107be5e33629456e43` passed 14/14 primitive cases
+on both controls with byte-identical outputs and unchanged worst max absolute error
+`0.0019738078117370605`. Its independently baked images shared payload fingerprint
+`53ff159c7ca2ea9a9dbf434335a84d599ecfa8ca7f6a461d5e6308ed9d4f9ca9`. The block-5
+serving gate retained 1,327,616 full tokens, captured target and draft graphs, reached health, and
+passed T4 twice.
+
+The frozen same-session A/B at runner commit `1231e49652c3a1a8fc504f079231f43cc14315bb`
+then measured:
+
+| Reader | Open-ended tok/s | Accept length | Mean request latency |
+|---|---:|---:|---:|
+| scalar | 25.652 +/- 0.331 | 2.134 +/- 0.026 | 6.270 +/- 0.083 s |
+| scale-hoisted | 25.973 +/- 0.305 | 2.094 +/- 0.024 | 6.187 +/- 0.073 s |
+
+The `+0.321 tok/s` gain missed the 0.5 floor and the 1-SE bars overlapped. Acceptance fell by
+0.040 versus a 0.036 combined SE, tripping the frozen no-regression guard; latency improved only
+inside overlapping error bars. Both arms retained capacity and passed T4 before and after. The
+optimization is therefore rejected, not quoted as a speedup, and the source tree restores the
+byte-identical scalar reader from `dc43db1`/`9f62de4`.
+
+Raw correctness evidence is in `artifacts/e7-fa4-fp4-scale-hoist-correctness-b584006/`; raw A/B
+samples, histograms, contracts, inspections, logs, and the fail-closed decision are in
+`artifacts/e7-scale-hoist-ab-1231e49/`.
+
+### Stage 5A.2 pre-registration — native width-1 MTP on FA4
+
+- **Hypothesis:** E4's native-MTP wall #24 was specific to Triton's FP4 target-verify parser path.
+  The now-proven FA4 FP4 target and draft route should compile the two-token EAGLE verify graph,
+  allowing Inkling's own MTP head to replace the separate 0.9B DSpark model.
+- **One coherent factor:** relative to the measured Stage 5A block-5 candidate, change speculation
+  from external DSpark block 5 to native EAGLE width 1 (`steps=1`, `topk=1`, two draft tokens,
+  multi-layer EAGLE, rejection sampling). Keep the scalar FA4 reader, FP4 format, page 128,
+  score-mod bias, graphs, model, MoE/dense backends, memory fraction, transport, and 64K context
+  unchanged.
+- **Preflight:** `mtp.safetensors` must exist and hash identically on both controls; repo and image
+  payloads must match; the runtime command must contain exactly the EAGLE path and no DSpark model
+  or flags.
+- **Correctness gate:** the target and native draft load, allocate at least 1,256,984 usable full
+  tokens, capture all target and draft graph tiers with FA4, reach health, and pass two exact T4
+  requests. The logs must prove no external draft model allocation.
+- **Kill criterion:** any MTP hash mismatch, memory shortfall, Triton fallback, mixed speculative
+  path, graph failure, health timeout, or T4 mismatch rejects the rung without changing memory,
+  graph, page, or context settings.
+- **Promotion gate:** only after correctness passes, run a same-session block-5 DSpark versus MTP
+  n=32 A/B with T4 brackets, acceptance and latency no-regression guards, and power telemetry. MTP
+  must be equal or faster while eliminating the external draft allocation; otherwise DSpark stays.
+- **Cost bound:** one candidate-only correctness launch, then at most one two-arm adoption A/B.
+
+### Stage 5A.2 result — FA4 clears wall #24, capacity gate rejects rung
+
+Exact runner commit `18ff162a74fd745fbc912f4e98f490f8eb58cd62` and the scalar SparkFlash
+image passed repo/image reproducibility. `mtp.safetensors` matched across controls at SHA-256
+`d286dd21cb982a0052d24ee0077ec6fc38f5a766dc6953e6c4b85c6473bfa7b3`. The target loaded,
+then the native `InklingForConditionalGenerationMTP` loaded 10 shards using 1.77 GB on rank 0;
+no `DSparkDraftModel` was loaded and the runtime contract proved EAGLE width 1 on FA4/page-128/FP4.
+
+Unlike E4's Triton run, FA4 compiled all 12 two-token target-verify graph tiers in 182.05 seconds
+and the server reached health with 14.36 GB available after capture. This is direct evidence that
+FA4 removes wall #24's Triton parser failure.
+
+The same immutable run allocated only `full_layer_tokens=1253248`, 3,736 tokens (0.297%) below the
+expanded 1,256,984-token gate. The fail-closed runner therefore rejected the rung immediately
+after health and before T4 or performance measurement. No MTP serving-correctness or speed claim
+is made. Raw identities, weight hash, runtime inspections, both rank logs, and the failed capacity
+contract are in `artifacts/e7-fa4-fp4-mtp-width1-18ff162/`.
+
+### Stage 5A.3 pre-registration — minimal MTP capacity rescue
+
+- **Hypothesis:** the native-MTP rung missed the capacity gate by only 3,736 tokens, approximately
+  23-30 MB across its target/SWA/draft FP4 pool geometry. Raising the isolated candidate's static
+  memory fraction from 0.850 to 0.851 adds roughly 128 MB of budget and should clear the target
+  without reducing graph coverage or request concurrency.
+- **Only changed factor:** `--mem-fraction-static 0.851`. Native EAGLE width 1, scalar FA4 reader,
+  FP4 format, page 128, score-mod, all 12 graph tiers through batch 16, max requests 16, context
+  64K, transport, and model backends remain byte-for-byte identical to Stage 5A.2.
+- **Safety/correctness gate:** usable full tokens >=1,256,984; all graphs capture; post-capture
+  available GPU memory remains at least 13 GB on rank 0; runtime proves no external draft; health
+  and two exact T4 requests pass. Both containers are stopped afterward.
+- **Kill criterion:** any capacity miss, post-capture headroom below 13 GB, graph/health/T4 failure,
+  or runtime drift rejects the rescue. Do not try 0.852 or remove graph tiers inside this rung.
+- **No adoption claim:** a pass permits one power-instrumented, same-session DSpark-versus-MTP A/B;
+  it does not change the champion's 0.85 default.
+
+### Stage 5A.3 result — rejected, capacity is not monotonic at this margin
+
+Exact runner commit `94d1ef6893f067b5caecbc91d4b4dc573c6f14f2` changed only the MTP
+candidate's static fraction to 0.851 and machine-checked that value on both ranks. Repo, image, and
+MTP-weight identities matched; native MTP again loaded, captured the two-token FA4 target-verify
+graph, reached health, and proved no external draft allocation.
+
+The pool nevertheless fell to 1,163,904 full tokens, 93,080 below the gate and 89,344 below the
+prior 0.850 run. Model/MTP available-memory snapshots were comparable, so the small fraction
+increase was dominated by runtime profiling/allocation variability rather than producing a
+monotonic 3,736-token rescue. The runner rejected before T4 as required. This invalidates the
+minimal-memory hypothesis; no higher fraction is inferred or attempted from this result.
+
+Raw evidence is in `artifacts/e7-fa4-fp4-mtp-rescue-94d1ef6/`. Native MTP remains a valuable FA4
+graph breakthrough but is not the Stage 5A candidate; DSpark block 5 remains selected for quality
+and further performance work.
+
 ## Why this is not a config experiment
 
 Four independent seams must be implemented before a launch is meaningful:
@@ -201,3 +525,442 @@ The upstream constraint source is SGLang's
 
 Until the serving, quality, and performance gates pass, E7 remains a development lane—not a flag
 to add to the champion `EXTRA_ARGS` and not a reason to change either control's configuration.
+
+### Stage 5A.4 quality attempt 1 — runtime passes, tokenizer API seam blocks NIAH
+
+Exact runner commit `e95e839` and scalar SparkFlash image payload
+`8b88229301b6b5817cec177c7570d8b1ee24a88640c24bb2d75aeb09f4b11a7f` matched across both
+controls. The DSpark block-5 server allocated 1,280,768 full-layer tokens, 23,784 above the gate;
+captured every target and draft graph tier through batch 16; reached health at 1,048,576 context;
+and passed the pre-quality byte-exact T4 gate.
+
+The first NIAH calibration call then stopped before generation because `/v1/tokenize` returned
+HTTP 500. The traceback ended in ORJSON with `Integer exceeds 64-bit range`. Source and model
+inspection identified the sole out-of-range response field: the tokenizer's conventional
+no-intrinsic-limit sentinel `1000000000000000019884624838656` was exposed as `max_model_len`.
+This is an API serialization failure, not a NIAH answer or model-quality failure. Both containers
+were stopped and the incomplete run was preserved in
+`artifacts/e7-fa4-fp4-quality-e95e839/`.
+
+The bounded retry changes only that serving metadata seam: `/v1/tokenize` reports SGLang's
+resolved `model_config.context_len`. A new fail-closed preflight requires a consistent token list
+and count plus `max_model_len=1048576` before T4 and NIAH. Kernel, FP4 representation, DSpark,
+memory, graph, model, benchmark prompts, and quality thresholds remain unchanged.
+
+The first retry preparation at `74b8da1` also stopped before launch because the repository
+fingerprint included each worktree's site-specific `.git` pointer file. Both worktrees were clean
+and their 152 runnable entries matched; only the embedded absolute metadata path differed. The
+fingerprinter now excludes `.git` in both directory and file form, with a checkout-versus-worktree
+regression test. This is an evidence-harness correction only; no serving process started.
+
+At the next exact run, repository/image identity, 1,315,584-token capacity, all graph tiers, the
+new tokenize contract, and T4 passed. The first 512K/10%-depth NIAH request measured 511,984
+tokens and returned the exact secret after 1,886.8 seconds. That result exposed a second harness
+weakness: NIAH retained all six results only in memory until the suite ended, so a later failure or
+transport interruption could erase hours of evidence. The run was deliberately terminated during
+case two and both containers were stopped. Because case one was not durably checkpointed, it is
+reported as diagnostic evidence only and must be rerun.
+
+The next exact retry adds atomic per-case checkpointing and explicit resume. Resume is accepted
+only when schema, model, full plan, and completed case-order prefix match exactly. Prompts, token
+calibration, depths, context targets, generation settings, correctness rule, model image, and all
+serving flags are unchanged.
+
+### Stage 5A.4 result — 512K/1M NIAH pass, duplicate tool calls stop quality
+
+Exact commit `f8e5540ad1fd68fad30a011f86e3929e1e96aa8b`, runnable payload
+`88ea26dc61016b5be7bb0059658d69b0d6a9a2cc813186274c6c54520d058639`, and full image payload
+`3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+The server allocated 1,325,312 full-layer tokens, 68,328 above the gate; captured all target/draft
+tiers through C16; passed the live tokenizer contract; and passed T4 before quality.
+
+NIAH then passed all six durable cases. The measured 512K prompts were 511,984/512,026/511,973
+tokens at 10/50/90% depth and completed in 1,882.6/1,875.6/1,876.4 seconds. The measured 1M
+prompts were 999,987/1,000,020/999,952 tokens and completed in 6,649.0/6,655.1/6,646.0 seconds.
+Every answer contained its exact unique secret; the atomic checkpoint is `complete=true`, 6/6,
+and `all_passed=true`. Post-NIAH T4 also passed.
+
+The next gate failed 0/16 tool flows. Every response selected the correct forced tool and emitted
+valid required arguments, but it emitted the same call twice with distinct generated call IDs.
+The harness correctly rejected those as two external actions; it did not execute any tool. GSM8K
+did not start, and both containers stopped. Raw evidence is in
+`artifacts/e7-fa4-fp4-quality-f8e5540/`.
+
+### Stage 5A.5 pre-registration — continuous-decode tool-stop isolation
+
+- **Hypothesis:** E8's accepted `--num-continuous-decode-steps 2` text-speed optimization crosses
+  Inkling's structured `END_MESSAGE` boundary and permits a second call. E8 tested T4 and text
+  workloads, not structured tools.
+- **Only changed factor:** continuous decode steps 2 to 1. Image, FA4 reader, native FP4 KV,
+  DSpark block 5, page 128, 1M context, memory fraction, graph tiers, max requests, MoE/GEMM,
+  transport, tool prompts, forced-choice objects, and four repetitions remain unchanged.
+- **Gate:** exact identities, capacity >=1,256,984, all graphs, pre/post T4, and 16/16 complete tool
+  flows including post-tool turns. Full raw OpenAI responses are retained in the candidate artifact.
+- **Kill/adoption rule:** any duplicate, wrong call, malformed arguments, parser-token leak, empty
+  post-tool answer, extra post-tool call, or T4 failure rejects CDS1. A pass identifies the stop
+  boundary but does not silently change the champion; its known text throughput cost must be
+  measured or the compiled scheduler stop logic fixed before final adoption.
+
+### Stage 5A.5 result — CDS1 rejected
+
+Exact commit `89c1ad5b35a26f0e365f783ec81a608ac2f60e5e`, runnable payload
+`c9a10d3c7d3758bfc7235ad4deceea0510648676fbacbace7f01326f426562a2`, and unchanged full image
+payload `3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+The candidate allocated 1,295,616 full-layer tokens, 38,632 above the gate; captured every target
+and draft graph through C16; and passed T4 before and after the tool suite.
+
+CDS1 still failed 0/16. Every flow again emitted exactly two calls with the requested name and
+arguments but distinct server-generated IDs. The complete OpenAI responses prove this is the same
+failure, so continuous decoding is rejected as the cause. Both containers stopped. Raw evidence is
+in `artifacts/e7-tool-cds1-89c1ad5/`.
+
+### Stage 5A.6 pre-registration — speculative-decoding isolation
+
+- **Hypothesis:** DSpark proposal/verification emits the same canonical call twice independently of
+  continuous decoding.
+- **Only changed factor:** disable speculation. CDS1, image, FA4 reader, native FP4 KV, page 128,
+  1M context, memory fraction, graph tiers through C16, max requests, MoE/GEMM, transport, tool
+  prompts, forced-choice objects, and four repetitions remain unchanged.
+- **Gate:** exact identities, capacity >=1,256,984, all target decode graphs, T4 before/after, and
+  16/16 complete tool flows including post-tool turns. Full raw OpenAI responses are retained.
+- **Kill/adoption rule:** any tool or T4 failure rejects spec-off as a fix. If every response still
+  duplicates, DSpark is ruled out and the next rung must capture and compare the model's raw
+  canonical token stream, rendered forced-tool template, and parser result without client-side
+  deduplication.
+
+### Stage 5A.6 result — speculation ruled out
+
+Exact commit `accdd145b96ee768c5f4ca5007da23044b5bb0b9`, runnable payload
+`155ef5a344503aa54514a5ace7554190a01f306b52d9a45bdea93c7101c5b74c`, and unchanged image payload
+`3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+Spec-off allocated 1,450,240 full-layer tokens, 193,256 above the gate; captured all target decode
+graphs through C16; and passed T4 before and after the tool suite.
+
+All 16 tool flows still emitted exactly two otherwise-valid identical calls. Speculation is
+therefore ruled out. Both containers stopped. Raw evidence is in
+`artifacts/e7-tool-specoff-accdd14/`.
+
+Source inspection identified a separate request/cardinality confounder. The OpenAI protocol model
+defaults `parallel_tool_calls` to true, and the benchmark did not override it despite requiring
+exactly one action. SGLang forwards the flag to `FunctionCallParser.get_structure_constraint`, but
+the legacy structural-tag fallback builds only an `at_least_one` constraint and does not visibly
+encode the false cardinality.
+
+### Stage 5A.7 pre-registration — explicit single-call protocol isolation
+
+- **Hypothesis:** duplicate calls are permitted by the benchmark's omitted OpenAI cardinality flag,
+  or expose a server bug where the legacy Inkling structural tag ignores that flag.
+- **Only changed factor:** add `parallel_tool_calls=false` to both requests in every tool flow. The
+  frozen spec-off/CDS1 server, image, prompts, forced choice, repetitions, context, graph, memory,
+  transport, and all other request fields remain unchanged.
+- **Gate:** the same identity, capacity, C1-C16 graph, bracketed T4, and 16/16 complete-flow gate.
+- **Kill/adoption rule:** a pass fixes the benchmark contract and proceeds to DSpark validation with
+  the same explicit flag. A duplicate proves the server is not enforcing the OpenAI single-call
+  contract; fix that integration upstream-style, never by response deduplication.
+
+### Stage 5A.7 result — server ignores false cardinality
+
+Exact commit `81a0b9568f017b8503e75637a21e8d4de489edaf`, runnable payload
+`54df08598d162aa3956587083ac54ddcea3580eaf89715a15f9be4d25680bc8a`, and unchanged image payload
+`3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+The spec-off/CDS1 stack allocated 1,516,288 full-layer tokens, captured C1-C16 graphs, and passed
+T4 before and after. Despite every request explicitly setting `parallel_tool_calls=false`, all 16
+responses still contained exactly two valid identical calls. Raw evidence is in
+`artifacts/e7-tool-single-81a0b95/`.
+
+The failure matches the source path: `serving_chat.py` forwards the flag, but
+`FunctionCallParser.get_legacy_structural_tag` accepts only `at_least_one`; the compiled Inkling
+tag therefore remains repeatable. This is an SGLang protocol-enforcement defect, not a model,
+DSpark, continuous-decode, or client-deduplication problem.
+
+### Stage 5A.8 pre-registration — native single-call terminator
+
+- **Hypothesis:** when parallel calls are false, completing Inkling's first canonical call with its
+  native `<|content_model_end_sampling|>` terminator makes the grammar and requested cardinality
+  agree without hiding any generated action.
+- **Only changed factor:** add an optional detector-provided `single_call_end` to the generic legacy
+  structural-tag builder and define it for Inkling as `END_MESSAGE + CONTENT_MODEL_END_SAMPLING`.
+  It is selected only when `parallel_tool_calls=false`; the ordinary end, parallel-true behavior,
+  parser output, model, spec-off/CDS1 runtime, prompts, and all other flags remain unchanged.
+- **Gate:** exact identities, >=1,256,984 capacity, C1-C16 graphs, bracketed T4, and 16/16 complete
+  flows including post-tool turns, with every raw response retained.
+- **Kill/adoption rule:** reject on any duplicate, malformed call, token leak, empty/extra post-tool
+  response, or T4 failure. A pass must then be repeated with DSpark block 5 before quality resumes.
+
+### Stage 5A.8 result — extended tag end rejected
+
+Exact commit `8ce0f9afd89ebe6c5ab676797a3bf586c6a22e9b`, runnable payload
+`20b40dd8cc6ac8e2942f0f113ffec79092c9daaa3b650546a1012b372188ddc0`, and patched image payload
+`23730e305fefb24d8d0cb59040c6ef914c062532fb77e6e12a5ea66856e1c19b` matched across controls.
+The spec-off stack allocated 1,498,240 full-layer tokens, captured C1-C16 graphs, and passed both
+T4 probes. The tool gate still failed 0/16 with two calls per response; the first raw response also
+duplicated visible assistant text. Extending a tag's end does not limit how many times that tag may
+occur, so this candidate is rejected. Raw evidence is in `artifacts/e7-tool-fix-8ce0f9a/`.
+
+### Stage 5A.9 pre-registration — exact-one JSON constraint
+
+- **Hypothesis:** SGLang's existing generic required/named JSON-array constraint correctly enforces
+  `maxItems=1`, whereas legacy/model-native structural tags cannot express that upper bound.
+- **Only changed factor:** in `FunctionCallParser.get_structure_constraint`, required/named requests
+  with `parallel_tool_calls=false` return the existing JSON schema constraint before model-native or
+  legacy tags. Parallel-true and auto behavior, all detector/parser code, model, runtime, and request
+  suite remain unchanged.
+- **Gate:** image import must prove `kind=json_schema` and `maxItems=1`; live gates remain exact
+  identity, >=1,256,984 capacity, C1-C16 graphs, bracketed T4, and 16/16 complete flows with raw
+  responses.
+- **Kill/adoption rule:** reject on any call, post-tool, or T4 failure. A pass must be repeated with
+  DSpark block 5 before quality resumes.
+
+### Stage 5A.9 result — exact-one path passes spec-off
+
+Exact commit `ff2dc464c41769f643ef296f8c6bff07c734ef09`, runnable payload
+`1e1d67e3967d05825a1bf2883671ef6600bfcba79347d45de14ef55883c2e71b`, and patched image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The image import gate proved `kind=json_schema` and `minItems=maxItems=1`. The live stack allocated
+1,500,160 full-layer tokens, 243,176 above the gate; captured all C1-C16 target graphs; and passed
+T4 before and after the tool suite.
+
+All 16 flows passed. Every initial turn contained exactly one requested call with valid arguments;
+every post-tool turn had nonempty text and zero tool calls; no parser token leaked. Raw evidence is
+in `artifacts/e7-tool-json1-ff2dc46/`.
+
+### Stage 5A.10 pre-registration — final DSpark/CDS2 tool confirmation
+
+- **Purpose:** confirm the accepted protocol fix on the intended high-performance runtime rather
+  than adopt from an isolation stack.
+- **Changed factors from isolation:** restore the already validated E8 winner settings, DSpark block
+  5 and continuous decode steps 2. Image, exact-one request, FA4/FP4/page-128/1M runtime, graph tiers,
+  max requests, prompts, repetitions, transport, and all correctness rules remain unchanged.
+- **Gate:** exact identities, >=1,256,984 capacity, every target and draft C1-C16 graph, bracketed
+  T4, and 16/16 complete tool flows with full raw responses.
+- **Kill/adoption rule:** reject on any duplicate, malformed call, token leak, empty/extra post-tool
+  response, graph/capacity drift, or T4 failure. Only a full pass unblocks GSM8K.
+
+### Stage 5A.10 result — final DSpark/CDS2 tool gate passes
+
+Exact commit `733dc1f71cf9d785eed3c3f757fb6b6b9110fa75`, runnable payload
+`a3fc903e20c67db526c3182ef0264a556244bd1aa1ab804429d7557d3cd4252f`, and exact-one image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The intended DSpark-block-5/CDS2 stack allocated 1,312,000 full-layer tokens, 55,016 above the gate;
+captured every target and draft C1-C16 graph; and passed T4 before and after the suite.
+
+All 16 complete flows passed again. Every initial turn contained exactly one valid requested call,
+every post-tool turn had nonempty content and no call, and no parser token leaked. Raw evidence is in
+`artifacts/e7-tool-final-733dc1f/`. The exact-one fix is adopted in the SparkFlash development lane;
+the production champion remains untouched.
+
+### Stage 5A.11 pre-registration — resume quality at GSM8K
+
+- **Prior invariant evidence:** exact `f8e5540` already passed all six 512K/1M NIAH cases and
+  bracketed T4. The accepted delta changes the benchmark's OpenAI cardinality field plus SGLang's
+  required/named tool-constraint routing; it does not change model execution, attention, KV,
+  tokenizer rendering, sampling, or NIAH code.
+- **Continuation:** seed the complete schema-v2 NIAH checkpoint into a fresh exact-run evidence
+  directory. The fail-closed resume validator must accept the identical model/plan and execute zero
+  NIAH cases, after which the current server reruns the 16-flow tool gate and full official GSM8K.
+- **Gate:** exact identities, capacity, all C1-C16 target/draft graphs, tokenizer contract, T4 before
+  quality and after NIAH, durable NIAH 6/6 unchanged, tools 16/16, and GSM8K >=94.83% with zero
+  benchmark errors.
+- **Kill/adoption rule:** any resume mismatch, tool/T4 regression, benchmark error, or GSM8K score
+  below threshold stops quality. Preserve all raw responses and both node logs.
+
+### Stage 5A.11 result — GSM8K runtime crash after 40 durable items
+
+Exact commit `258ea9d5c8fe98976e3bd60135b999a35f0b742c`, runnable payload
+`9f846e86b9df37669243bffb2ced7ffc50ab7b7d84c4d0979521f370318188d7`, and image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The stack allocated 1,338,240 full-layer tokens; passed all graph, tokenizer, NIAH-resume, tool, and
+bracketed-T4 gates; then began official GSM8K at C8. The first 40 items are durable with 97.50%
+running accuracy. At the next batch, rank 0 hit a CUDA illegal memory access and all eight in-flight
+requests returned HTTP 500. The run correctly stopped and both containers exited. Raw evidence is
+in `artifacts/e7-quality-resume-258ea9d/`.
+
+The synchronous Python stack points at compiled FP4 KV quantization during target prefill, but CUDA
+may report an earlier asynchronous fault there. Rank 1 shows only the resulting NCCL watchdog
+failure. Standalone 100-iteration contiguous and stride-2 quantizer loops both passed with a device
+synchronize after every call, so no quantizer fix is adopted from the asynchronous stack alone.
+
+### Stage 5A.12 pre-registration — synchronous crash attribution
+
+- **Only changed factor:** set `CUDA_LAUNCH_BLOCKING=1` inside both rank containers. Repository,
+  image, final DSpark/CDS2 runtime, C8, prompts, item order, and all benchmark settings stay fixed.
+- **Resume:** reuse the exact NIAH checkpoint and 40 checksum-bound GSM8K records. The benchmark's
+  resume validator must accept both and begin at item 40.
+- **Gate:** reproduce or pass at least the next five C8 batches. A synchronous traceback must name
+  the actual failing launch before any code fix is proposed.
+- **Kill/adoption rule:** diagnostic mode cannot be adopted or used for final performance. Preserve
+  all logs and newly completed records; do not lower concurrency.
+
+### Stage 5A.12 result — synchronization masks, does not attribute
+
+Exact commit `172374f3f12ad710422977730f0479f283716c26`, runnable payload
+`1d399da27fce28c42e8551fbc8d1dd7723893713a1171f38a0167b7f17bc2c08`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+Launch-blocking mode passed all pre-quality gates and resumed at item 40. Six new C8 batches
+completed through item 88 with no illegal access; 84/88 answers are correct (95.45%). The bounded
+run was then intentionally stopped, causing only the expected rank-1 transport reset after rank 0
+exited. Raw evidence is in `artifacts/e7-quality-sync-172374f/`.
+
+Because synchronization changes scheduling and the fault did not reproduce, no kernel is cleared
+or blamed. This diagnostic result cannot count as a reliability or performance pass.
+
+### Stage 5A.13 pre-registration — DSpark isolation under asynchronous C8
+
+- **Only changed factor:** disable speculation while restoring normal asynchronous CUDA execution.
+  FA4, native FP4 KV, page 128, 1M context, CDS2, C8, prompts, item order, and all other runtime and
+  benchmark settings remain unchanged.
+- **Resume:** reuse the exact NIAH checkpoint and 88 checksum-bound GSM8K records; begin at item 88.
+- **Gate:** run at least five new C8 batches with no HTTP or benchmark error, preserving every
+  response and both logs.
+- **Kill/adoption rule:** a reproduced illegal access rules out DSpark. A five-batch pass implicates
+  but does not yet prove DSpark; the next rung must isolate its graph/state transitions. Spec-off is
+  diagnostic only and cannot satisfy the final performance stack.
+
+### Stage 5A.13 result — spec-off reproduces, DSpark ruled out
+
+Exact commit `7345663222abda84aa75bbbc9a7ac59c2565ddfe`, runnable payload
+`534ca4f02b0a73175c2bd3c895f16d192d66db08af93b60e289ac681dc455853`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+Spec-off allocated 1,472,768 full-layer tokens and passed all pre-quality gates. Five new normal
+asynchronous C8 batches completed through item 128. Immediately afterward the scheduler reproduced
+the CUDA illegal access while entering another target prefill; the visible kernel was the compiled
+FP4 quantizer's fused pack operation. DSpark is ruled out. Raw evidence is in
+`artifacts/e7-quality-specoff-c8-7345663/`.
+
+An additional 2,000-call mixed-shape, output-discard, single-final-sync quantizer stress loop passed,
+so the writer does not fail in isolation. The remaining clean separator is its interaction with the
+attention reader and serving scheduler.
+
+### Stage 5A.14 pre-registration — FA4 reader isolation
+
+- **Only changed factor:** attention backend FA4 to the established Triton reference. Keep native
+  FP4 KV writing/storage, page 128, spec-off, CDS2, normal asynchronous CUDA, C8, prompts, and item
+  order unchanged.
+- **Resume:** reuse the exact NIAH checkpoint and 128 checksum-bound GSM8K records; begin at item 128.
+- **Gate:** boot and T4 must pass, then at least five new C8 batches with no HTTP/benchmark error.
+- **Kill/adoption rule:** a reproduced illegal access implicates the common writer/storage path. A
+  five-batch pass implicates FA4's asynchronous reader interaction but does not itself constitute a
+  SparkFlash adoption result. Triton remains a diagnostic reference, not a substitution.
+
+### Stage 5A.14 result — page-128 Triton comparison rejected before serve
+
+Exact commit `61d2175c9d9d3318b3da36ca61393284fde4419f`, runnable payload
+`5c40d06f2bd6e51e61c40bea19d587e716fe22af0aa25effb87be80c88840dab`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+The comparison stopped during pool allocation with the intended fail-closed guard:
+`backend=triton page_size=128, expected=1`. No request ran and no reader claim is made. Raw evidence
+is in `artifacts/e7-quality-triton-c8-61d2175/`.
+
+### Stage 5A.15 pre-registration — backend-native Triton/page-1 reference
+
+- **Linked changed factors:** FA4/page 128 to Triton/page 1, because each backend's FP4 reader has a
+  different mandatory page size. This is a diagnostic reference with an acknowledged page-layout
+  confound, not a one-factor adoption experiment.
+- **Held fixed:** the same `FP4MXBlock16KVQuantizeUtil` writer, native raw-storage class, spec-off,
+  CDS2, normal asynchronous CUDA, C8, prompts, item order, and all quality inputs.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass boot, T4, and at least five
+  new C8 batches without error.
+- **Kill/adoption rule:** a reproduced illegal access implicates the common writer/storage path. A
+  pass narrows the fault to FA4/page-128 interaction but cannot distinguish reader from layout.
+
+### Stage 5A.15 result — Triton/page-1 reference is not quality-equivalent
+
+Exact commit `c4ff609db87f01da3d18ad6d4e3f560912b2bf50`, runnable payload
+`43fcc8c0e954b4b3f35a6cc2e0ef47daad1af1473741560e02572d5f08ad796b`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+Triton/page 1 allocated 1,522,726 full-layer tokens, captured C1-C16 graphs, and passed T4 and the
+NIAH resume. It then failed the tool gate 9/16: malformed visible pseudo-calls, wrong arguments, and
+control-token leakage occurred. GSM8K did not run. This reference is numerically unsuitable and
+cannot clear the common FP4 writer. Raw evidence is in `artifacts/e7-quality-triton-page1-c4ff609/`.
+
+### Stage 5A.16 pre-registration — eager FP4 store quantization
+
+- **Hypothesis:** asynchronous Inductor-generated FP4 quantizer kernels are unstable in sustained
+  serving; the eager tensor implementation preserves numerics while removing that compiler seam.
+- **Only changed factor:** remove `@torch.compile` from
+  `FP4MXBlock16KVQuantizeUtil.batched_quantize`. The tensor algorithm, FP4 format, FA4/page-128
+  reader, DSpark block 5, CDS2, 1M context, C8, and all quality inputs remain unchanged.
+- **Image gate:** compilation/import plus a real GPU quantize call must prove eager dispatch and
+  expected payload/scale shapes.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
+  all graphs, T4, 16/16 tools, and at least five new normal-asynchronous C8 batches without error.
+- **Kill/adoption rule:** any error rejects eager quantization. A pass is a stability candidate only;
+  it must undergo final full GSM8K and performance comparison before adoption.
+
+### Stage 5A.16 result — eager store blocked by bounds constant during graph capture
+
+Exact commit `e69c9a8e01a19f25f11f42d3b5a6d041935c7f29`, runnable payload
+`89900295cb5dd32f05db58c1ea1973826f175e6a396ae3014e049d2c83fa7367`, and eager image payload
+`2ccd7aec7fd1d5b3bce484f565fc6a54c59ca05e5b9ab0c6fee390cdc59c5876` matched across controls.
+The image GPU gate passed, but target graph capture stopped before serving: eager
+`tensor.new_tensor(E2M1_BOUNDS)` attempted a CPU-to-GPU copy inside capture. No request ran and no
+stability claim is made. The observed 1,223,808-token allocation was also below the capacity gate,
+so a retry must independently clear capacity. Raw evidence is in
+`artifacts/e7-quality-eager-fp4-e69c9a8/`.
+
+### Stage 5A.16.1 pre-registration — graph-safe eager thresholds
+
+- **Only implementation delta:** replace the bounds tensor construction and vector comparison with
+  seven scalar threshold comparisons summed on-device. Threshold values and E2M1 magnitude mapping
+  remain byte-for-byte equivalent; quantization remains eager.
+- **Held fixed:** final FA4/page-128/FP4/DSpark-block-5/CDS2/1M/C8 stack and all quality inputs.
+- **Gate:** image GPU test, >=1,256,984 capacity, every target/draft C1-C16 graph, bracketed T4,
+  16/16 tools, and at least five new asynchronous C8 batches from the 128-item checkpoint.
+- **Kill/adoption rule:** any capacity, graph, correctness, or runtime error rejects the candidate.
+
+### Stage 5A.16.1 result — eager store still crashes, Inductor is exonerated
+
+Exact commit `4f233206175f108b967023fdf1ac91c8956c8d49`, runnable payload
+`273dd0f1f41fb892df06ad91377da042d2bfb5c3222ec1fee79ad14dae4cfa9f`, and graph-safe eager image
+payload `4586b05e5eb84cc8a70e595985eee5b367e65bb735d80caf60ecfd3cbb54d32c` matched across controls.
+The candidate allocated 1,317,760 full-layer tokens; captured every target/draft graph; passed
+tokenizer, T4, NIAH resume, and 16/16 tool gates. It then crashed before completing the first resumed
+C8 batch. With no compiled FP4 store kernel present, the visible error moved to a BF16 CUBLAS GEMM,
+followed by the same illegal-address watchdog failure. The eager candidate is rejected and the
+compiled quantizer is exonerated as the origin. Raw evidence is in
+`artifacts/e7-quality-eager-graphsafe-4f23320/`.
+
+### Stage 5A.17 pre-registration — overlap-scheduler isolation
+
+- **Hypothesis:** the illegal address is a cross-stream lifetime/order race in overlap scheduling;
+  global launch blocking masks it by serializing work, while changing individual kernels only moves
+  the later reporting point.
+- **Only changed factor:** add `--disable-overlap-schedule`. Restore the original compiled FP4 writer
+  and keep FA4/page 128, DSpark block 5, CDS2, 1M context, graphs, C8, and all quality inputs fixed.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
+  every graph, bracketed T4, 16/16 tools, and at least five new C8 batches without error.
+- **Kill/adoption rule:** a failure rules overlap scheduling out. A pass is a correctness candidate
+  only; measure latency/throughput cost and then replace global de-overlap with the smallest correct
+  stream/event dependency if possible.
+
+### Stage 5A.17 result — overlap scheduling is exonerated
+
+Exact commit `e55d83f45c9dd642444564b228fbaef1f6572512`, runnable payload
+`e50856a5eda80a77fb1d84ec05e5587f31fc6f6ebaf027213a8be09549f78872`, and image payload
+`22afed476160789d46a34e0da5cec127b60e4d90a0af2eff3cb8f8694b9c775b` matched across controls.
+The no-overlap candidate allocated 1,296,000 full-layer tokens, captured every target/draft graph,
+passed tokenizer, T4, NIAH resume, and 16/16 tools. It then crashed on the first resumed C8 batch at
+item 128 on both ranks. The visible reporting point was again a BF16 CUBLAS GEMM followed by the
+illegal-address watchdog failure. Global overlap scheduling is rejected as the root cause. Raw
+evidence is in `artifacts/e7-quality-no-overlap-e55d83f/`.
+
+### Stage 5A.18 pre-registration — decode CUDA-graph isolation
+
+- **Hypothesis:** one of the target/draft decode graph captures or replays retains a stale FP4 KV
+  pointer or shape. Launch blocking masks the illegal write, while changing the writer and scheduler
+  only changes its later reporting point.
+- **Concrete source seam:** at the image's pinned SGLang commit `b7252cc6b`,
+  `MHATokenToKVPoolFP4.set_kv_buffer()` takes a capture-only multi-stream path: K payload/scales are
+  written on the current stream while V payload/scales are written on the pool's `alt_stream`, then
+  joined. Graph-off removes that branch as well as graph replay. If this rung passes, the next
+  candidate is the narrower single-stream FP4 graph store, not adoption of global graph-off.
+- **Prepared diagnostic, not an adoption:** `FP4_STORE_SINGLE_STREAM=1` maps to the container-only
+  `SGLANG_FP4_KV_CAPTURE_SINGLE_STREAM=1`. The default omits the environment variable and retains
+  upstream behavior. Before first serve, the dual-control GPU pool gate must prove both selections,
+  every payload/scale writer, radix moves, and fixed-tile allocation.
+- **Only changed factor:** disable CUDA graphs. Restore overlap scheduling and keep the original
+  compiled writer, FA4/page 128, DSpark block 5, CDS2, 1M context, C8, and all quality inputs fixed.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
+  bracketed T4, 16/16 tools, and at least five new C8 batches without error.
+- **Kill/adoption rule:** any error rejects the hypothesis. A pass is diagnostic only because graph-off
+  performance cannot be adopted without measuring the target throughput gates.

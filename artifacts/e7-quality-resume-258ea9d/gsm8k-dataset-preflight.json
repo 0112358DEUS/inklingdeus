@@ -1,0 +1,7 @@
+{
+  "items": 1319,
+  "dataset_sha256": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14",
+  "concurrency": 8,
+  "reasoning_effort": "max",
+  "minimum_acceptable_pct": 94.83
+}

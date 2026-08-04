@@ -1,0 +1,3 @@
+REJECT: disabling overlap scheduling did not prevent the sustained C8 illegal-memory failure.
+The exact candidate passed capacity, tokenizer, bracketed T4, resumed NIAH 6/6, and tools 16/16,
+then both ranks failed on the first resumed GSM8K C8 batch at item 128. GSM8K remained at 128 records.

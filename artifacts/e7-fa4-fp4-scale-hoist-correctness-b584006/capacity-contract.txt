@@ -1,0 +1,1 @@
+FP4 CAPACITY PASS full_layer_tokens=1327616 minimum=1256984 headroom=70632 swa_layer_tokens=132736
