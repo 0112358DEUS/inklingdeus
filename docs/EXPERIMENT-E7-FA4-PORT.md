@@ -600,3 +600,30 @@ did not start, and both containers stopped. Raw evidence is in
   post-tool answer, extra post-tool call, or T4 failure rejects CDS1. A pass identifies the stop
   boundary but does not silently change the champion; its known text throughput cost must be
   measured or the compiled scheduler stop logic fixed before final adoption.
+
+### Stage 5A.5 result — CDS1 rejected
+
+Exact commit `89c1ad5b35a26f0e365f783ec81a608ac2f60e5e`, runnable payload
+`c9a10d3c7d3758bfc7235ad4deceea0510648676fbacbace7f01326f426562a2`, and unchanged full image
+payload `3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+The candidate allocated 1,295,616 full-layer tokens, 38,632 above the gate; captured every target
+and draft graph through C16; and passed T4 before and after the tool suite.
+
+CDS1 still failed 0/16. Every flow again emitted exactly two calls with the requested name and
+arguments but distinct server-generated IDs. The complete OpenAI responses prove this is the same
+failure, so continuous decoding is rejected as the cause. Both containers stopped. Raw evidence is
+in `artifacts/e7-tool-cds1-89c1ad5/`.
+
+### Stage 5A.6 pre-registration — speculative-decoding isolation
+
+- **Hypothesis:** DSpark proposal/verification emits the same canonical call twice independently of
+  continuous decoding.
+- **Only changed factor:** disable speculation. CDS1, image, FA4 reader, native FP4 KV, page 128,
+  1M context, memory fraction, graph tiers through C16, max requests, MoE/GEMM, transport, tool
+  prompts, forced-choice objects, and four repetitions remain unchanged.
+- **Gate:** exact identities, capacity >=1,256,984, all target decode graphs, T4 before/after, and
+  16/16 complete tool flows including post-tool turns. Full raw OpenAI responses are retained.
+- **Kill/adoption rule:** any tool or T4 failure rejects spec-off as a fix. If every response still
+  duplicates, DSpark is ruled out and the next rung must capture and compare the model's raw
+  canonical token stream, rendered forced-tool template, and parser result without client-side
+  deduplication.
