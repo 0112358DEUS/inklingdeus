@@ -26,9 +26,7 @@ def main() -> int:
     backend = root / "srt/layers/attention/flashattention_backend.py"
     server_args = root / "srt/server_args.py"
     serving_tokenize = root / "srt/entrypoints/openai/serving_tokenize.py"
-    tool_core = root / "srt/function_call/core_types.py"
     tool_parser = root / "srt/function_call/function_call_parser.py"
-    inkling_detector = root / "srt/function_call/inkling_detector.py"
 
     replace_exact(
         dispatcher,
@@ -266,88 +264,25 @@ def main() -> int:
     )
 
     replace_exact(
-        tool_core,
-        """class StructureInfo:
-    begin: str
-    end: str
-    trigger: str
+        tool_parser,
+        """        try:
+            if tool_choice == "auto" and not should_constrain_auto:
 """,
-        """class StructureInfo:
-    begin: str
-    end: str
-    trigger: str
-    # Optional model-native terminator used when the OpenAI request forbids
-    # parallel calls. Detectors without one retain their existing grammar.
-    single_call_end: Optional[str] = None
-""",
-    )
+        """        try:
+            # Legacy/model-native structural tags constrain call shape but do
+            # not encode a maximum cardinality. Required/named OpenAI requests
+            # that explicitly forbid parallel calls must use the existing
+            # JSON-array schema path, whose maxItems=1 is enforceable.
+            if is_required and not parallel_tool_calls:
+                json_schema = get_json_schema_constraint(
+                    self.tools,
+                    tool_choice,
+                    parallel_tool_calls=False,
+                )
+                if json_schema is not None:
+                    return ("json_schema", json_schema)
 
-    replace_exact(
-        tool_parser,
-        """    def get_legacy_structural_tag(
-        self, at_least_one: bool = False
-    ) -> StructuralTagResponseFormat:
-""",
-        """    def get_legacy_structural_tag(
-        self,
-        at_least_one: bool = False,
-        parallel_tool_calls: bool = True,
-    ) -> StructuralTagResponseFormat:
-""",
-    )
-    replace_exact(
-        tool_parser,
-        """            at_least_one: If True, the grammar forces at least one tool call
-                (no free text allowed). Used for required/named tool_choice.
-""",
-        """            at_least_one: If True, the grammar forces at least one tool call
-                (no free text allowed). Used for required/named tool_choice.
-            parallel_tool_calls: When False, use a detector-provided native
-                single-call terminator if one exists.
-""",
-    )
-    replace_exact(
-        tool_parser,
-        """                    end=info.end,
-""",
-        """                    end=(
-                        info.single_call_end
-                        if not parallel_tool_calls and info.single_call_end
-                        else info.end
-                    ),
-""",
-    )
-    replace_exact(
-        tool_parser,
-        """                    tag = self.get_legacy_structural_tag(at_least_one=is_required)
-""",
-        """                    tag = self.get_legacy_structural_tag(
-                        at_least_one=is_required,
-                        parallel_tool_calls=parallel_tool_calls,
-                    )
-""",
-    )
-
-    replace_exact(
-        inkling_detector,
-        """    CONTENT_INVOKE_TOOL_TEXT,
-    END_MESSAGE,
-""",
-        """    CONTENT_INVOKE_TOOL_TEXT,
-    CONTENT_MODEL_END_SAMPLING,
-    END_MESSAGE,
-""",
-    )
-    replace_exact(
-        inkling_detector,
-        """                end=f"}}{self.eot_token}",
-                trigger=trigger,
-""",
-        """                end=f"}}{self.eot_token}",
-                trigger=trigger,
-                single_call_end=(
-                    f"}}{self.eot_token}{CONTENT_MODEL_END_SAMPLING}"
-                ),
+            if tool_choice == "auto" and not should_constrain_auto:
 """,
     )
 

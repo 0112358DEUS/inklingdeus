@@ -686,3 +686,27 @@ DSpark, continuous-decode, or client-deduplication problem.
   flows including post-tool turns, with every raw response retained.
 - **Kill/adoption rule:** reject on any duplicate, malformed call, token leak, empty/extra post-tool
   response, or T4 failure. A pass must then be repeated with DSpark block 5 before quality resumes.
+
+### Stage 5A.8 result — extended tag end rejected
+
+Exact commit `8ce0f9afd89ebe6c5ab676797a3bf586c6a22e9b`, runnable payload
+`20b40dd8cc6ac8e2942f0f113ffec79092c9daaa3b650546a1012b372188ddc0`, and patched image payload
+`23730e305fefb24d8d0cb59040c6ef914c062532fb77e6e12a5ea66856e1c19b` matched across controls.
+The spec-off stack allocated 1,498,240 full-layer tokens, captured C1-C16 graphs, and passed both
+T4 probes. The tool gate still failed 0/16 with two calls per response; the first raw response also
+duplicated visible assistant text. Extending a tag's end does not limit how many times that tag may
+occur, so this candidate is rejected. Raw evidence is in `artifacts/e7-tool-fix-8ce0f9a/`.
+
+### Stage 5A.9 pre-registration — exact-one JSON constraint
+
+- **Hypothesis:** SGLang's existing generic required/named JSON-array constraint correctly enforces
+  `maxItems=1`, whereas legacy/model-native structural tags cannot express that upper bound.
+- **Only changed factor:** in `FunctionCallParser.get_structure_constraint`, required/named requests
+  with `parallel_tool_calls=false` return the existing JSON schema constraint before model-native or
+  legacy tags. Parallel-true and auto behavior, all detector/parser code, model, runtime, and request
+  suite remain unchanged.
+- **Gate:** image import must prove `kind=json_schema` and `maxItems=1`; live gates remain exact
+  identity, >=1,256,984 capacity, C1-C16 graphs, bracketed T4, and 16/16 complete flows with raw
+  responses.
+- **Kill/adoption rule:** reject on any call, post-tool, or T4 failure. A pass must be repeated with
+  DSpark block 5 before quality resumes.
