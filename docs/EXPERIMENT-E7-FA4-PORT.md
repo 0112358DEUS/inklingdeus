@@ -657,3 +657,32 @@ encode the false cardinality.
 - **Kill/adoption rule:** a pass fixes the benchmark contract and proceeds to DSpark validation with
   the same explicit flag. A duplicate proves the server is not enforcing the OpenAI single-call
   contract; fix that integration upstream-style, never by response deduplication.
+
+### Stage 5A.7 result — server ignores false cardinality
+
+Exact commit `81a0b9568f017b8503e75637a21e8d4de489edaf`, runnable payload
+`54df08598d162aa3956587083ac54ddcea3580eaf89715a15f9be4d25680bc8a`, and unchanged image payload
+`3660ab042e4cbfb33f026d06c7b37a7657f4ea89f7411d52ea2d716f5930a2de` matched across controls.
+The spec-off/CDS1 stack allocated 1,516,288 full-layer tokens, captured C1-C16 graphs, and passed
+T4 before and after. Despite every request explicitly setting `parallel_tool_calls=false`, all 16
+responses still contained exactly two valid identical calls. Raw evidence is in
+`artifacts/e7-tool-single-81a0b95/`.
+
+The failure matches the source path: `serving_chat.py` forwards the flag, but
+`FunctionCallParser.get_legacy_structural_tag` accepts only `at_least_one`; the compiled Inkling
+tag therefore remains repeatable. This is an SGLang protocol-enforcement defect, not a model,
+DSpark, continuous-decode, or client-deduplication problem.
+
+### Stage 5A.8 pre-registration — native single-call terminator
+
+- **Hypothesis:** when parallel calls are false, completing Inkling's first canonical call with its
+  native `<|content_model_end_sampling|>` terminator makes the grammar and requested cardinality
+  agree without hiding any generated action.
+- **Only changed factor:** add an optional detector-provided `single_call_end` to the generic legacy
+  structural-tag builder and define it for Inkling as `END_MESSAGE + CONTENT_MODEL_END_SAMPLING`.
+  It is selected only when `parallel_tool_calls=false`; the ordinary end, parallel-true behavior,
+  parser output, model, spec-off/CDS1 runtime, prompts, and all other flags remain unchanged.
+- **Gate:** exact identities, >=1,256,984 capacity, C1-C16 graphs, bracketed T4, and 16/16 complete
+  flows including post-tool turns, with every raw response retained.
+- **Kill/adoption rule:** reject on any duplicate, malformed call, token leak, empty/extra post-tool
+  response, or T4 failure. A pass must then be repeated with DSpark block 5 before quality resumes.

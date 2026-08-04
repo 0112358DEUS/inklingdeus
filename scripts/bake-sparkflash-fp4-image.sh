@@ -30,6 +30,9 @@ docker create --name "$CONTAINER" --entrypoint bash "$SOURCE_IMAGE" -lc "
     $SGL/kernels/ops/attention/flash_attention_v4.py \
     $SGL/srt/server_args.py \
     $SGL/srt/entrypoints/openai/serving_tokenize.py \
+    $SGL/srt/function_call/core_types.py \
+    $SGL/srt/function_call/function_call_parser.py \
+    $SGL/srt/function_call/inkling_detector.py \
     $SGL/srt/mem_cache/kv_quant_pools.py \
     $SGL/srt/mem_cache/kv_cache_configurator.py
 " >/dev/null
@@ -46,5 +49,5 @@ docker commit "$CONTAINER" "$TAG" >/dev/null
 docker rm "$CONTAINER" >/dev/null
 
 docker run --rm --entrypoint python3 "$TAG" -c \
-  'from sglang.kernels.ops.attention.flash_attn.cute import flash_attn_varlen_func; from sglang.srt.mem_cache.kv_quant_pools import MHATokenToKVPoolFP4Native; assert callable(flash_attn_varlen_func); print("SPARKFLASH FP4 IMAGE IMPORT PASS")'
+  'from sglang.kernels.ops.attention.flash_attn.cute import flash_attn_varlen_func; from sglang.srt.mem_cache.kv_quant_pools import MHATokenToKVPoolFP4Native; from sglang.srt.function_call.inkling_detector import InklingDetector; from sglang.srt.parser.inkling_tokenizer import CONTENT_MODEL_END_SAMPLING; info = InklingDetector().structure_info()("probe"); assert info.single_call_end.endswith(CONTENT_MODEL_END_SAMPLING); assert callable(flash_attn_varlen_func); print("SPARKFLASH FP4 IMAGE IMPORT PASS")'
 echo "SPARKFLASH FP4 DEV IMAGE BAKED: $TAG"
