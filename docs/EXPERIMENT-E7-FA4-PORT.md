@@ -815,3 +815,29 @@ or blamed. This diagnostic result cannot count as a reliability or performance p
 - **Kill/adoption rule:** a reproduced illegal access rules out DSpark. A five-batch pass implicates
   but does not yet prove DSpark; the next rung must isolate its graph/state transitions. Spec-off is
   diagnostic only and cannot satisfy the final performance stack.
+
+### Stage 5A.13 result — spec-off reproduces, DSpark ruled out
+
+Exact commit `7345663222abda84aa75bbbc9a7ac59c2565ddfe`, runnable payload
+`534ca4f02b0a73175c2bd3c895f16d192d66db08af93b60e289ac681dc455853`, and unchanged image payload
+`6c58976bbb2f0deb0dd84e6ccf73973a9a9c7bbebc19a6d682ff2da60d0c6d02` matched across controls.
+Spec-off allocated 1,472,768 full-layer tokens and passed all pre-quality gates. Five new normal
+asynchronous C8 batches completed through item 128. Immediately afterward the scheduler reproduced
+the CUDA illegal access while entering another target prefill; the visible kernel was the compiled
+FP4 quantizer's fused pack operation. DSpark is ruled out. Raw evidence is in
+`artifacts/e7-quality-specoff-c8-7345663/`.
+
+An additional 2,000-call mixed-shape, output-discard, single-final-sync quantizer stress loop passed,
+so the writer does not fail in isolation. The remaining clean separator is its interaction with the
+attention reader and serving scheduler.
+
+### Stage 5A.14 pre-registration — FA4 reader isolation
+
+- **Only changed factor:** attention backend FA4 to the established Triton reference. Keep native
+  FP4 KV writing/storage, page 128, spec-off, CDS2, normal asynchronous CUDA, C8, prompts, and item
+  order unchanged.
+- **Resume:** reuse the exact NIAH checkpoint and 128 checksum-bound GSM8K records; begin at item 128.
+- **Gate:** boot and T4 must pass, then at least five new C8 batches with no HTTP/benchmark error.
+- **Kill/adoption rule:** a reproduced illegal access implicates the common writer/storage path. A
+  five-batch pass implicates FA4's asynchronous reader interaction but does not itself constitute a
+  SparkFlash adoption result. Triton remains a diagnostic reference, not a substitution.
