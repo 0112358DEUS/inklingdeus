@@ -14,6 +14,7 @@ GID=${GID:-3}
 SPEC=${SPEC:-1}
 ATTN=${ATTN:-fa4}
 PAGE=${PAGE:-128}
+DISABLE_OVERLAP=${DISABLE_OVERLAP:-0}
 RESULT_DIR=${RESULT_DIR:-artifacts/e7-fa4-fp4-quality}
 READY_TIMEOUT=${READY_TIMEOUT:-900}
 MIN_FULL_TOKENS=${MIN_FULL_TOKENS:-1256984}
@@ -31,6 +32,11 @@ esac
 case "$PAGE" in
   1|128) ;;
   *) echo "PAGE must be 1 or 128" >&2; exit 2 ;;
+esac
+case "$DISABLE_OVERLAP" in
+  0) OVERLAP_ARGS= ;;
+  1) OVERLAP_ARGS=--disable-overlap-schedule ;;
+  *) echo "DISABLE_OVERLAP must be 0 or 1" >&2; exit 2 ;;
 esac
 
 case "$RESULT_DIR" in
@@ -160,14 +166,14 @@ PY
 start_server() {
   stop_arm
   ssh -f -o BatchMode=yes "$WORKER_SSH" \
-    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/quality-worker.log") CUDA_LAUNCH_BLOCKING=$(printf '%q' "${CUDA_LAUNCH_BLOCKING:-}") ATTN=$(printf '%q' "$ATTN") MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 SPEC=$(printf '%q' "$SPEC") BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=$(printf '%q' "$PAGE") CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' '--kv-cache-dtype fp4_mx_block16') ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
+    "mkdir -p $(printf '%q' "$WORKER_REPO/$RESULT_DIR") && cd $(printf '%q' "$WORKER_REPO") && exec env MASTER_IP=$(printf '%q' "$MASTER_IP") IF=$(printf '%q' "$IF") HCA=$(printf '%q' "$HCA") GID=$(printf '%q' "$GID") MODELS=$(printf '%q' "$MODELS") IMAGE=$(printf '%q' "$IMAGE") LOG=$(printf '%q' "$WORKER_REPO/$RESULT_DIR/quality-worker.log") CUDA_LAUNCH_BLOCKING=$(printf '%q' "${CUDA_LAUNCH_BLOCKING:-}") ATTN=$(printf '%q' "$ATTN") MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 SPEC=$(printf '%q' "$SPEC") BLOCK=5 GRAPHS=1 GRAPH_BS=$(printf '%q' '1 2 3 4 5 6 7 8 10 12 14 16') RAGGED= INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE=$(printf '%q' "$PAGE") CONTINUOUS_DECODE_STEPS=2 EXTRA_ARGS=$(printf '%q' "--kv-cache-dtype fp4_mx_block16 $OVERLAP_ARGS") ./scripts/inkling-sglang-launch.sh 1 </dev/null >/dev/null 2>&1"
   sleep 3
   nohup env MASTER_IP="$MASTER_IP" IF="$IF" HCA="$HCA" GID="$GID" \
     MODELS="$MODELS" IMAGE="$IMAGE" LOG="$REPO_DIR/$RESULT_DIR/quality-head.log" \
     ATTN="$ATTN" MOE=marlin FP4GEMM=flashinfer_trtllm MEMFRAC=0.85 CTX=1048576 \
     SPEC="$SPEC" BLOCK=5 GRAPHS=1 GRAPH_BS="1 2 3 4 5 6 7 8 10 12 14 16" RAGGED= \
     INKLING_SHEARED_BIAS=0 MAXREQ=16 PAGE="$PAGE" CONTINUOUS_DECODE_STEPS=2 \
-    EXTRA_ARGS="--kv-cache-dtype fp4_mx_block16" \
+    EXTRA_ARGS="--kv-cache-dtype fp4_mx_block16 $OVERLAP_ARGS" \
     "$REPO_DIR/scripts/inkling-sglang-launch.sh" 0 </dev/null >/dev/null 2>&1 &
 }
 
@@ -176,6 +182,7 @@ verify_runtime_and_capacity() {
   ssh -o BatchMode=yes "$WORKER_SSH" docker inspect inkling-sglang \
     >"$RESULT_DIR/quality-worker-inspect.json"
   python3 - "$IMAGE" "$MIN_FULL_TOKENS" "$SPEC" "$ATTN" "$PAGE" \
+    "$DISABLE_OVERLAP" \
     "$RESULT_DIR/quality-head.log" \
     "$RESULT_DIR/quality-head-inspect.json" "$RESULT_DIR/quality-worker-inspect.json" <<'PY' \
     | tee "$RESULT_DIR/runtime-capacity-contract.txt"
@@ -189,7 +196,8 @@ minimum = int(sys.argv[2])
 spec = int(sys.argv[3])
 attention = sys.argv[4]
 page = sys.argv[5]
-log_path = Path(sys.argv[6])
+disable_overlap = int(sys.argv[6])
+log_path = Path(sys.argv[7])
 text = log_path.read_text(encoding="utf-8", errors="replace")
 match = re.search(
     r"Use sliding window memory pool\. full_layer_tokens=(\d+), "
@@ -216,7 +224,7 @@ spec_required = {
     "--speculative-draft-model-quantization": "unquant",
     "--speculative-dspark-block-size": "5",
 }
-for path_text in sys.argv[7:]:
+for path_text in sys.argv[8:]:
     path = Path(path_text)
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     if payload["Config"]["Image"] != image:
@@ -235,6 +243,11 @@ for path_text in sys.argv[7:]:
             raise SystemExit(f"{path}: forbidden spec-off flags: {sorted(present)}")
     if "SGLANG_OPT_USE_INKLING_SHEARED_BIAS=0" not in set(payload["Config"]["Env"]):
         raise SystemExit(f"{path}: score-mod bias contract failed")
+    overlap_count = command.count("--disable-overlap-schedule")
+    if overlap_count != disable_overlap:
+        raise SystemExit(
+            f"{path}: disable-overlap count={overlap_count}, expected={disable_overlap}"
+        )
 proofs = (
     (
         f"Initialized DSpark draft runner. attention_backend={attention}",
@@ -251,7 +264,8 @@ for proof in proofs:
 print(
     f"FP4 1M RUNTIME PASS attention={attention} page={page} full_layer_tokens={full} "
     f"headroom={full - minimum} swa_layer_tokens={swa} "
-    f"spec={'dspark' if spec else 'off'} block={5 if spec else 'none'} graphs=C16"
+    f"spec={'dspark' if spec else 'off'} block={5 if spec else 'none'} "
+    f"overlap={'off' if disable_overlap else 'on'} graphs=C16"
 )
 PY
 }

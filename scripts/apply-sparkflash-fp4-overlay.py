@@ -27,7 +27,6 @@ def main() -> int:
     server_args = root / "srt/server_args.py"
     serving_tokenize = root / "srt/entrypoints/openai/serving_tokenize.py"
     tool_parser = root / "srt/function_call/function_call_parser.py"
-    kvfp4_tensor = root / "srt/layers/quantization/kvfp4_tensor.py"
 
     replace_exact(
         dispatcher,
@@ -284,29 +283,6 @@ def main() -> int:
                     return ("json_schema", json_schema)
 
             if tool_choice == "auto" and not should_constrain_auto:
-""",
-    )
-
-    replace_exact(
-        kvfp4_tensor,
-        """    @staticmethod
-    @torch.compile
-    def batched_quantize(tensor: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-""",
-        """    @staticmethod
-    def batched_quantize(tensor: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-""",
-    )
-    replace_exact(
-        kvfp4_tensor,
-        """        bounds = tensor.new_tensor(E2M1_BOUNDS, dtype=torch.float32)
-        magnitude_bits = torch.sum(abs_vals.unsqueeze(-1) >= bounds, dim=-1)
-""",
-        """        # Scalar comparisons preserve the exact seven E2M1 thresholds
-        # without a CPU-to-GPU constant copy during CUDA graph capture.
-        magnitude_bits = sum(
-            (abs_vals >= bound).to(torch.uint8) for bound in E2M1_BOUNDS
-        )
 """,
     )
 

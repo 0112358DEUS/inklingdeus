@@ -907,3 +907,28 @@ so a retry must independently clear capacity. Raw evidence is in
 - **Gate:** image GPU test, >=1,256,984 capacity, every target/draft C1-C16 graph, bracketed T4,
   16/16 tools, and at least five new asynchronous C8 batches from the 128-item checkpoint.
 - **Kill/adoption rule:** any capacity, graph, correctness, or runtime error rejects the candidate.
+
+### Stage 5A.16.1 result — eager store still crashes, Inductor is exonerated
+
+Exact commit `4f233206175f108b967023fdf1ac91c8956c8d49`, runnable payload
+`273dd0f1f41fb892df06ad91377da042d2bfb5c3222ec1fee79ad14dae4cfa9f`, and graph-safe eager image
+payload `4586b05e5eb84cc8a70e595985eee5b367e65bb735d80caf60ecfd3cbb54d32c` matched across controls.
+The candidate allocated 1,317,760 full-layer tokens; captured every target/draft graph; passed
+tokenizer, T4, NIAH resume, and 16/16 tool gates. It then crashed before completing the first resumed
+C8 batch. With no compiled FP4 store kernel present, the visible error moved to a BF16 CUBLAS GEMM,
+followed by the same illegal-address watchdog failure. The eager candidate is rejected and the
+compiled quantizer is exonerated as the origin. Raw evidence is in
+`artifacts/e7-quality-eager-graphsafe-4f23320/`.
+
+### Stage 5A.17 pre-registration — overlap-scheduler isolation
+
+- **Hypothesis:** the illegal address is a cross-stream lifetime/order race in overlap scheduling;
+  global launch blocking masks it by serializing work, while changing individual kernels only moves
+  the later reporting point.
+- **Only changed factor:** add `--disable-overlap-schedule`. Restore the original compiled FP4 writer
+  and keep FA4/page 128, DSpark block 5, CDS2, 1M context, graphs, C8, and all quality inputs fixed.
+- **Resume/gate:** reuse NIAH plus 128 checksum-bound GSM8K records; pass exact identities, capacity,
+  every graph, bracketed T4, 16/16 tools, and at least five new C8 batches without error.
+- **Kill/adoption rule:** a failure rules overlap scheduling out. A pass is a correctness candidate
+  only; measure latency/throughput cost and then replace global de-overlap with the smallest correct
+  stream/event dependency if possible.
